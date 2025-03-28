@@ -50,7 +50,7 @@ export default function CertificatesList({
     certificates: allCertificates,
     isLoading: isAllCertLoading,
     error: allCertError,
-  } = useAllCertificates();
+  } = useUserCertificates();
 
   const certificates = role === 2 ? allCertificates : userCertificates;
   const isLoading = role === 2 ? isAllCertLoading : isUserCertLoading;

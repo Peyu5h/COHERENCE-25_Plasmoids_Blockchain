@@ -1,60 +1,69 @@
 import { useState, useEffect } from "react";
 import { useUserRole } from "~/hooks/useUserRole";
+import { useReadContract } from "wagmi";
+import { userRegistryAddress, userRegistryAbi } from "~/lib/abi/userRegistry";
 
 export interface UserDetails {
   name: string;
   walletAddress: `0x${string}` | string;
-  email: string;
   phone: string;
   address: string;
   aadharNumber: string;
   didAddress: string;
   dob: string;
+  gender: string;
 }
 
 export function useUser(address?: `0x${string}`) {
-  const { name, isLoading: isRoleLoading } = useUserRole(address);
+  const { name: roleName, isLoading: isRoleLoading } = useUserRole(address);
   const [isLoading, setIsLoading] = useState(true);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
 
+  const {
+    data: userData,
+    isError,
+    isLoading: isContractLoading,
+  } = useReadContract({
+    address: userRegistryAddress,
+    abi: userRegistryAbi,
+    functionName: "getUserData",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    },
+  });
+
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      setIsLoading(true);
-      try {
-        // In a real app, this would be an API call to fetch user details
-        // For now, we'll mock the data based on the address
-        if (address && name) {
-          // This simulates an API delay
-          await new Promise((resolve) => setTimeout(resolve, 500));
+    if (userData && address) {
+      const [name, dob, gender, physicalAddress, mobileNumber] = userData as [
+        string,
+        string,
+        string,
+        string,
+        string,
+        number,
+        boolean,
+      ];
 
-          // Mock data - in real app, this would come from backend
-          const userDetails: UserDetails = {
-            name: name,
-            walletAddress: address,
-            email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-            phone: "+91 9876543210",
-            address: "401 C-wing, Happy Homes Society, J.M. Road, Mumbai",
-            aadharNumber: "XXXX-XXXX-1234",
-            didAddress: `0x${address.substring(2, 8)}...${address.substring(address.length - 4)}`,
-            dob: "2000-01-15", // Format: YYYY-MM-DD
-          };
+      const userDetails: UserDetails = {
+        name,
+        walletAddress: address,
+        phone: mobileNumber,
+        address: physicalAddress,
+        aadharNumber: "XXXX-XXXX-1234", // Keep this private/masked
+        didAddress: `did:ethr:${address}`,
+        dob,
+        gender,
+      };
 
-          setUserDetails(userDetails);
-        }
-      } catch (error) {
-        console.error("Error fetching user details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (address && name && !isRoleLoading) {
-      fetchUserDetails();
-    } else if (!address || !name) {
+      setUserDetails(userDetails);
+      setIsLoading(false);
+    } else if (isError) {
+      console.error("Error fetching user data from contract");
       setUserDetails(null);
       setIsLoading(false);
     }
-  }, [address, name, isRoleLoading]);
+  }, [userData, address, isError]);
 
   // Calculate age from dob
   const calculateAge = (dob?: string): number | undefined => {
@@ -80,7 +89,7 @@ export function useUser(address?: `0x${string}`) {
 
   return {
     user: userDetails,
-    isLoading: isLoading || isRoleLoading,
+    isLoading: isLoading || isRoleLoading || isContractLoading,
     age,
   };
 }

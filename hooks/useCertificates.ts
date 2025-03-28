@@ -61,6 +61,7 @@ export function useAllCertificates() {
     data,
     isError,
     isLoading: isContractLoading,
+    refetch,
   } = useReadContract({
     address: userRegistryAddress,
     abi: userRegistryAbi,
@@ -100,5 +101,6 @@ export function useAllCertificates() {
     certificates,
     isLoading: isLoading || isContractLoading,
     error,
+    refetchCertificates: refetch,
   };
 }

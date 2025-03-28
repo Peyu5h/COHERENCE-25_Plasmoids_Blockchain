@@ -154,6 +154,11 @@ export default function UserDashboard() {
 
   const activityData = generateActivityData();
 
+  function formatDID(did: string) {
+    if (!did) return "";
+    return `${did.slice(0, 12)}...${did.slice(-12)}`;
+  }
+
   return (
     <RoleProtectedRoute requiredRole={UserRole.User}>
       <div className="from-background/40 to-background/60 flex h-screen flex-col overflow-hidden bg-gradient-to-b lg:flex-row">
@@ -266,7 +271,9 @@ export default function UserDashboard() {
                     <div>
                       <p className="text-sm font-medium">DID Address</p>
                       <p className="text-muted-foreground text-sm">
-                        {user?.didAddress}
+                        {user?.didAddress
+                          ? formatDID(user.didAddress)
+                          : "Not available"}{" "}
                       </p>
                     </div>
                   </div>
