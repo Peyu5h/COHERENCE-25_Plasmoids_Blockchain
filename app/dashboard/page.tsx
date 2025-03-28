@@ -55,6 +55,7 @@ import CertificatesList from "~/components/CertificatesList";
 import RequestCertificateForm from "~/components/RequestCertificateForm";
 import { toast } from "sonner";
 import { useUserCertificates } from "~/hooks/useCertificates";
+import QRCode from "qrcode";
 
 export default function UserDashboard() {
   const { address } = useAccount();
@@ -84,26 +85,47 @@ export default function UserDashboard() {
     }));
   };
 
-  const generateShareableQR = () => {
+  const generateQRCode = async () => {
     if (!user) return;
 
-    const shareableData = {
-      did: user.didAddress,
+    const sharedData = {
       timestamp: new Date().toISOString(),
       sharedData: {
-        ...(sharingPreferences.fullName && { name: user.name }),
-        ...(sharingPreferences.phone && { phone: user.phone }),
-        ...(sharingPreferences.aadhar && { aadharNumber: user.aadharNumber }),
-        ...(sharingPreferences.age && { age }),
-        ...(sharingPreferences.address && { address: user.address }),
+        name: user.name,
+        phone: user.phone,
+        age: calculateAge(user.dob),
+        address: user.address,
+        aadharNumber: user.aadharNumber,
       },
     };
 
-    const qrData = JSON.stringify(shareableData);
-    setQrValue(
-      `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=250x250`,
-    );
-    toast.success("QR code generated successfully");
+    const encodedData = encodeURIComponent(JSON.stringify(sharedData));
+    const url = `${window.location.origin}/userDetails?data=${encodedData}`;
+
+    try {
+      const qr = await QRCode.toDataURL(url);
+      setQrValue(qr);
+      toast.success("QR code generated successfully");
+    } catch (err) {
+      console.error("Error generating QR code:", err);
+      toast.error("Failed to generate QR code");
+    }
+  };
+
+  const calculateAge = (dob: string) => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
   };
 
   const generateActivityData = () => {
@@ -113,34 +135,34 @@ export default function UserDashboard() {
     const authorityAddress = "0xD7f6b69d601A84F19971A91f25c2224A4e29a6ed";
 
     for (const cert of certificates) {
+      const uploadTimestamp = Number(cert.timestamp) * 1000;
+
       activityData.push({
-        id: `${cert.certificateId}-upload`,
+        id: `${cert.certificateId}-${uploadTimestamp}-upload`,
         action: "Certificate Uploaded",
         details: `Certificate ID: ${cert.certificateId} - ${cert.certificateType} Certificate`,
-        timestamp: new Date(Number(cert.timestamp) * 1000).toLocaleString(),
+        timestamp: new Date(uploadTimestamp).toLocaleString(),
         status: "completed",
         icon: <UploadCloud className="text-primary h-5 w-5" />,
       });
 
       if (cert.isVerified) {
+        const verificationTimestamp = uploadTimestamp + 3600000;
         activityData.push({
-          id: `${cert.certificateId}-verified`,
+          id: `${cert.certificateId}-${verificationTimestamp}-verified`,
           action: "Certificate Verified",
           details: `Certificate ID: ${cert.certificateId} was approved by authority (${authorityAddress.substring(0, 6)}...${authorityAddress.substring(authorityAddress.length - 4)})`,
-          timestamp: new Date(
-            Number(cert.timestamp) * 1000 + 3600000,
-          ).toLocaleString(),
+          timestamp: new Date(verificationTimestamp).toLocaleString(),
           status: "success",
           icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
         });
       } else {
+        const pendingTimestamp = uploadTimestamp + 1800000;
         activityData.push({
-          id: `${cert.certificateId}-pending`,
+          id: `${cert.certificateId}-${pendingTimestamp}-pending`,
           action: "Verification Pending",
           details: `Certificate ID: ${cert.certificateId} is awaiting verification`,
-          timestamp: new Date(
-            Number(cert.timestamp) * 1000 + 1800000,
-          ).toLocaleString(),
+          timestamp: new Date(pendingTimestamp).toLocaleString(),
           status: "pending",
           icon: <AlertCircle className="h-5 w-5 text-amber-500" />,
         });
@@ -454,7 +476,7 @@ export default function UserDashboard() {
                     </CardContent>
                     <CardFooter>
                       <Button
-                        onClick={generateShareableQR}
+                        onClick={generateQRCode}
                         className="w-full"
                         disabled={isLoading || !user}
                       >

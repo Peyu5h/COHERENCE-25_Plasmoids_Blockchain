@@ -50,7 +50,7 @@ export function useUser(address?: `0x${string}`) {
         walletAddress: address,
         phone: mobileNumber,
         address: physicalAddress,
-        aadharNumber: "XXXX-XXXX-1234", // Keep this private/masked
+        aadharNumber: "XXXX-XXXX-XXXX",
         didAddress: `did:ethr:${address}`,
         dob,
         gender,
@@ -65,7 +65,6 @@ export function useUser(address?: `0x${string}`) {
     }
   }, [userData, address, isError]);
 
-  // Calculate age from dob
   const calculateAge = (dob?: string): number | undefined => {
     if (!dob) return undefined;
 

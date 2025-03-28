@@ -21,6 +21,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Switch } from "~/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -46,36 +47,12 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
+  Share2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-const Switch = ({
-  id,
-  checked,
-  onCheckedChange,
-}: {
-  id: string;
-  checked: boolean;
-  onCheckedChange: () => void;
-}) => {
-  return (
-    <button
-      id={id}
-      role="switch"
-      aria-checked={checked}
-      data-state={checked ? "checked" : "unchecked"}
-      className={`relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${checked ? "bg-primary" : "bg-muted"}`}
-      onClick={onCheckedChange}
-    >
-      <span
-        data-state={checked ? "checked" : "unchecked"}
-        className={`bg-background pointer-events-none block h-5 w-5 rounded-full shadow-lg ring-0 transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
-      />
-    </button>
-  );
-};
-
+// Mock verification history data
 const verificationHistory = [
   {
     id: 1,
@@ -133,6 +110,7 @@ export default function VerifierDashboard() {
     educationValue: "Bachelor's",
   });
   const [generatedQrUrl, setGeneratedQrUrl] = useState<string | null>(null);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("create");
 
   useEffect(() => {
@@ -142,41 +120,35 @@ export default function VerifierDashboard() {
   }, [conditions, activeTab]);
 
   const generateQrCode = () => {
-    const verificationData = {
-      verifierId: address,
-      timestamp: new Date().toISOString(),
-      conditions: {
-        ...(conditions.ageCheck && {
-          age: {
-            value: parseInt(conditions.ageValue),
-            operator: conditions.ageOperator,
-          },
-        }),
-        ...(conditions.incomeCheck && {
-          income: {
-            value: parseInt(conditions.incomeValue),
-            operator: conditions.incomeOperator,
-          },
-        }),
-        ...(conditions.cityCheck && {
-          city: {
-            value: conditions.cityValue,
-            operator: "equals",
-          },
-        }),
-        ...(conditions.educationCheck && {
-          education: {
-            value: conditions.educationValue,
-            operator: "equals",
-          },
-        }),
-      },
-    };
+    const baseUrl = window.location.origin + "/verify";
 
-    const qrData = JSON.stringify(verificationData);
+    const params = new URLSearchParams();
+    params.append("verifierId", address || "");
+
+    if (conditions.ageCheck) {
+      params.append("ageValue", conditions.ageValue);
+      params.append("ageOperator", conditions.ageOperator);
+    }
+
+    if (conditions.incomeCheck) {
+      params.append("incomeValue", conditions.incomeValue);
+      params.append("incomeOperator", conditions.incomeOperator);
+    }
+
+    if (conditions.cityCheck && conditions.cityValue) {
+      params.append("cityValue", conditions.cityValue);
+    }
+
+    if (conditions.educationCheck && conditions.educationValue) {
+      params.append("educationValue", conditions.educationValue);
+    }
+
+    const verificationEndpoint = `${baseUrl}?${params.toString()}`;
+    setVerificationUrl(verificationEndpoint);
+
     setGeneratedQrUrl(
       `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-        qrData,
+        verificationEndpoint,
       )}&size=200x200`,
     );
   };
@@ -204,6 +176,13 @@ export default function VerifierDashboard() {
       link.click();
       document.body.removeChild(link);
       toast.success("QR code downloaded successfully");
+    }
+  };
+
+  const copyVerificationUrl = () => {
+    if (verificationUrl) {
+      navigator.clipboard.writeText(verificationUrl);
+      toast.success("Verification URL copied to clipboard");
     }
   };
 
@@ -242,6 +221,19 @@ export default function VerifierDashboard() {
     if (!did) return "";
     return `${did.slice(0, 12)}...${did.slice(-12)}`;
   }
+
+  const renderOperatorText = (operator: string) => {
+    switch (operator) {
+      case "greaterThan":
+        return "Greater Than (>)";
+      case "lessThan":
+        return "Less Than (<)";
+      case "equals":
+        return "Equals (=)";
+      default:
+        return operator;
+    }
+  };
 
   return (
     <RoleProtectedRoute requiredRole={UserRole.Verifier}>
@@ -331,7 +323,7 @@ export default function VerifierDashboard() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Home className="text-primary/70 mt-0.5 h-12 w-12" />
+                    <Home className="text-primary/70 mt-0.5 h-5 w-5" />
                     <div>
                       <p className="text-sm font-medium">Address</p>
                       <p className="text-muted-foreground text-sm">
@@ -404,147 +396,177 @@ export default function VerifierDashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-6">
-                      <div className="space-y-6">
+                      <div className="bg-muted/5 rounded-md border p-4">
+                        <h3 className="mb-4 flex items-center gap-2 font-medium">
+                          <UserCheck className="text-primary h-4 w-4" />
+                          Age Verification
+                        </h3>
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="age-check"
-                                checked={conditions.ageCheck}
-                                onCheckedChange={() =>
-                                  handleToggleCondition("ageCheck")
-                                }
-                              />
-                              <Label
-                                htmlFor="age-check"
-                                className="font-medium"
-                              >
-                                Age Verification
-                              </Label>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="age-check"
+                              checked={conditions.ageCheck}
+                              onCheckedChange={() =>
+                                handleToggleCondition("ageCheck")
+                              }
+                            />
+                            <Label htmlFor="age-check" className="font-medium">
+                              Enable Age Verification
+                            </Label>
                           </div>
 
                           {conditions.ageCheck && (
-                            <div className="ml-7 grid grid-cols-2 gap-2">
-                              <Select
-                                value={conditions.ageOperator}
-                                onValueChange={(value) =>
-                                  handleInputChange("ageOperator", value)
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Operator" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="greaterThan">
-                                    Greater Than ({">"})
-                                  </SelectItem>
-                                  <SelectItem value="lessThan">
-                                    Less Than ({"<"})
-                                  </SelectItem>
-                                  <SelectItem value="equals">
-                                    Equals (=)
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                type="number"
-                                placeholder="Age"
-                                value={conditions.ageValue}
-                                onChange={(e) =>
-                                  handleInputChange("ageValue", e.target.value)
-                                }
-                              />
+                            <div className="bg-background border-border/30 mt-4 ml-0 grid grid-cols-2 gap-3 rounded-md border p-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="age-operator">Condition</Label>
+                                <Select
+                                  value={conditions.ageOperator}
+                                  onValueChange={(value) =>
+                                    handleInputChange("ageOperator", value)
+                                  }
+                                >
+                                  <SelectTrigger id="age-operator">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="greaterThan">
+                                      Greater Than {">"}
+                                    </SelectItem>
+                                    <SelectItem value="lessThan">
+                                      Less Than {"<"}
+                                    </SelectItem>
+                                    <SelectItem value="equals">
+                                      Equals {" = "}
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="age-value">Age (Years)</Label>
+                                <Input
+                                  id="age-value"
+                                  type="number"
+                                  placeholder="Age"
+                                  value={conditions.ageValue}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      "ageValue",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
+                      </div>
 
+                      <div className="bg-muted/5 rounded-md border p-4">
+                        <h3 className="mb-4 flex items-center gap-2 font-medium">
+                          <FileCheck className="text-primary h-4 w-4" />
+                          Income Verification
+                        </h3>
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="income-check"
-                                checked={conditions.incomeCheck}
-                                onCheckedChange={() =>
-                                  handleToggleCondition("incomeCheck")
-                                }
-                              />
-                              <Label
-                                htmlFor="income-check"
-                                className="font-medium"
-                              >
-                                Income Verification
-                              </Label>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="income-check"
+                              checked={conditions.incomeCheck}
+                              onCheckedChange={() =>
+                                handleToggleCondition("incomeCheck")
+                              }
+                            />
+                            <Label
+                              htmlFor="income-check"
+                              className="font-medium"
+                            >
+                              Enable Income Verification
+                            </Label>
                           </div>
 
                           {conditions.incomeCheck && (
-                            <div className="ml-7 grid grid-cols-2 gap-2">
-                              <Select
-                                value={conditions.incomeOperator}
-                                onValueChange={(value) =>
-                                  handleInputChange("incomeOperator", value)
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Operator" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="greaterThan">
-                                    Greater Than ({">"})
-                                  </SelectItem>
-                                  <SelectItem value="lessThan">
-                                    Less Than ({"<"})
-                                  </SelectItem>
-                                  <SelectItem value="equals">
-                                    Equals (=)
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                type="number"
-                                placeholder="Income (₹)"
-                                value={conditions.incomeValue}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    "incomeValue",
-                                    e.target.value,
-                                  )
-                                }
-                              />
+                            <div className="bg-background border-border/30 mt-4 ml-0 grid grid-cols-2 gap-3 rounded-md border p-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="income-operator">
+                                  Condition
+                                </Label>
+                                <Select
+                                  value={conditions.incomeOperator}
+                                  onValueChange={(value) =>
+                                    handleInputChange("incomeOperator", value)
+                                  }
+                                >
+                                  <SelectTrigger id="income-operator">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="greaterThan">
+                                      Greater Than {">"}
+                                    </SelectItem>
+                                    <SelectItem value="lessThan">
+                                      Less Than {"<"}
+                                    </SelectItem>
+                                    <SelectItem value="equals">
+                                      Equals {" = "}
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="income-value">Income (₹)</Label>
+                                <Input
+                                  id="income-value"
+                                  type="number"
+                                  placeholder="Income"
+                                  value={conditions.incomeValue}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      "incomeValue",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
+                      </div>
 
+                      <div className="bg-muted/5 rounded-md border p-4">
+                        <h3 className="mb-4 flex items-center gap-2 font-medium">
+                          <MapPin className="text-primary h-4 w-4" />
+                          Location Verification
+                        </h3>
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="city-check"
-                                checked={conditions.cityCheck}
-                                onCheckedChange={() =>
-                                  handleToggleCondition("cityCheck")
-                                }
-                              />
-                              <Label
-                                htmlFor="city-check"
-                                className="font-medium"
-                              >
-                                City/Location Verification
-                              </Label>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="city-check"
+                              checked={conditions.cityCheck}
+                              onCheckedChange={() =>
+                                handleToggleCondition("cityCheck")
+                              }
+                            />
+                            <Label htmlFor="city-check" className="font-medium">
+                              Enable Location Verification
+                            </Label>
                           </div>
 
                           {conditions.cityCheck && (
-                            <div className="ml-7">
-                              <Input
-                                type="text"
-                                placeholder="City name"
-                                value={conditions.cityValue}
-                                onChange={(e) =>
-                                  handleInputChange("cityValue", e.target.value)
-                                }
-                              />
+                            <div className="bg-background border-border/30 mt-4 ml-0 rounded-md border p-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="city-value">City Name</Label>
+                                <Input
+                                  id="city-value"
+                                  type="text"
+                                  placeholder="e.g. Mumbai"
+                                  value={conditions.cityValue}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      "cityValue",
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -575,21 +597,89 @@ export default function VerifierDashboard() {
                           </p>
                         </div>
                       )}
-                      <div className="text-muted-foreground text-center text-sm">
-                        <p>
-                          Users can scan this code to verify their credentials
-                          against your specified conditions
-                        </p>
+
+                      <div className="w-full space-y-4">
+                        <div className="text-muted-foreground text-center text-sm">
+                          <p>
+                            Users can scan this code to verify their credentials
+                            without revealing personal data
+                          </p>
+                        </div>
+
+                        <div className="bg-muted/5 rounded-md border p-3">
+                          <h4 className="text-muted-foreground mb-2 text-xs font-medium">
+                            VERIFICATION REQUIREMENTS
+                          </h4>
+                          <div className="space-y-2">
+                            {conditions.ageCheck && (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-background"
+                                >
+                                  Age{" "}
+                                  {renderOperatorText(conditions.ageOperator)}{" "}
+                                  {conditions.ageValue}
+                                </Badge>
+                              </div>
+                            )}
+
+                            {conditions.incomeCheck && (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-background"
+                                >
+                                  Income{" "}
+                                  {renderOperatorText(
+                                    conditions.incomeOperator,
+                                  )}{" "}
+                                  ₹{conditions.incomeValue}
+                                </Badge>
+                              </div>
+                            )}
+
+                            {conditions.cityCheck && conditions.cityValue && (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-background"
+                                >
+                                  Location: {conditions.cityValue}
+                                </Badge>
+                              </div>
+                            )}
+
+                            {!conditions.ageCheck &&
+                              !conditions.incomeCheck &&
+                              (!conditions.cityCheck ||
+                                !conditions.cityValue) && (
+                                <div className="text-muted-foreground text-sm">
+                                  No verification conditions set
+                                </div>
+                              )}
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="flex justify-center gap-4">
+                    <CardFooter className="grid grid-cols-2 flex-col gap-3 sm:flex-row">
                       <Button
                         onClick={handleDownloadQR}
                         className="w-full"
                         disabled={!generatedQrUrl}
                       >
                         <Download className="mr-2 h-4 w-4" />
-                        Download QR Code
+                        Download QR
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={copyVerificationUrl}
+                        className="w-full"
+                        disabled={!verificationUrl}
+                      >
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Copy Verify URL
                       </Button>
                     </CardFooter>
                   </Card>
@@ -608,7 +698,7 @@ export default function VerifierDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="min-h-[500px]">
-                    <div className="rounded-md border">
+                    <div className="overflow-hidden rounded-md border">
                       <div className="bg-muted/40 grid grid-cols-6 border-b p-4 font-medium">
                         <div className="col-span-2">User</div>
                         <div>Verification Type</div>

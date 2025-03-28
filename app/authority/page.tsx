@@ -48,6 +48,7 @@ import { getIPFSGatewayURL } from "~/hooks/usePinata";
 import { toast } from "sonner";
 import { useUserCertificates } from "~/hooks/useCertificates";
 import { format } from "date-fns";
+import { useAllUsers } from "~/hooks/useAllUsers";
 
 type Certificate = {
   userAddress: `0x${string}`;
@@ -62,8 +63,16 @@ type Certificate = {
 
 export default function AuthorityDashboard() {
   const { address, isConnected } = useAccount();
-  const { user, isLoading: userLoading, age } = useUser(address);
   const { name: roleName, role, isLoading: roleLoading } = useUserRole(address);
+  
+  const { user, isLoading: userLoading, age } = useUser(address);
+  const { users } = useAllUsers();
+  const { certificates } = useUserCertificates(
+    "0x1304865A3409A96abc5596C241f1572E1AAc0b87",
+  );
+  console.log("certs", certificates);
+  console.log(users);
+  console.log(user);
 
   const [processedCertificates, setProcessedCertificates] = useState<
     Record<string, boolean>
