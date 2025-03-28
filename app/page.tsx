@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
-import RegistrationForm from "~/components/RegistrationForm";
 import { useUserRole, UserRole } from "~/hooks/useUserRole";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import RegistrationForm from "~/components/RegistrationForm";
 
 export default function Home() {
   const router = useRouter();
@@ -31,7 +31,6 @@ export default function Home() {
     }
   }, [isLoading, isConnected, address, role, router]);
 
-  // Show loading state only if we're both connected and loading data
   if (isLoading && isConnected && address) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -41,7 +40,6 @@ export default function Home() {
     );
   }
 
-  // Need to register if role is None
   const needsRegistration = role === UserRole.None;
 
   return (

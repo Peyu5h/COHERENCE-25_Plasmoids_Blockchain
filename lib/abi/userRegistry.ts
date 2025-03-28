@@ -1,7 +1,7 @@
 import { Abi } from "viem";
 
 export const userRegistryAddress =
-  "0x75968A0268782c75C32f044A7b67Fd7FA200aC3c" as const;
+  "0x2B63013176D551b98045703f41A00f6BcCa04DdC" as const;
 
 export const userRegistryAbi = [
   {
@@ -26,6 +26,124 @@ export const userRegistryAbi = [
       },
     ],
     name: "AuthorityVerified",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "authorityAddress",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "certificateId",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "reason",
+        type: "string",
+      },
+    ],
+    name: "CertificateRejected",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "authorityAddress",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "certificateId",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "enum UserRegistry.CertificateType",
+        name: "certificateType",
+        type: "uint8",
+      },
+    ],
+    name: "CertificateRequested",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "authorityAddress",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "certificateId",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "enum UserRegistry.CertificateType",
+        name: "certificateType",
+        type: "uint8",
+      },
+    ],
+    name: "CertificateVerified",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "enum UserRegistry.Role",
+        name: "previousRole",
+        type: "uint8",
+      },
+      {
+        indexed: false,
+        internalType: "enum UserRegistry.Role",
+        name: "newRole",
+        type: "uint8",
+      },
+    ],
+    name: "UserPromoted",
     type: "event",
   },
   {
@@ -80,6 +198,44 @@ export const userRegistryAbi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "authorityDepartment",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "authorityLocation",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "getAllUsers",
     outputs: [
@@ -87,6 +243,40 @@ export const userRegistryAbi = [
         internalType: "address[]",
         name: "",
         type: "address[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_authorityAddress",
+        type: "address",
+      },
+    ],
+    name: "getAuthorityDetails",
+    outputs: [
+      {
+        internalType: "string",
+        name: "name",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "department",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "location",
+        type: "string",
+      },
+      {
+        internalType: "bool",
+        name: "isVerified",
+        type: "bool",
       },
     ],
     stateMutability: "view",
@@ -143,6 +333,132 @@ export const userRegistryAbi = [
         internalType: "address[]",
         name: "",
         type: "address[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getPendingCertificates",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "address",
+            name: "userAddress",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "authorityAddress",
+            type: "address",
+          },
+          {
+            internalType: "string",
+            name: "certificateId",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "issuanceDate",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "ipfsHash",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "metadataHash",
+            type: "string",
+          },
+          {
+            internalType: "enum UserRegistry.CertificateType",
+            name: "certificateType",
+            type: "uint8",
+          },
+          {
+            internalType: "bool",
+            name: "isVerified",
+            type: "bool",
+          },
+          {
+            internalType: "uint256",
+            name: "timestamp",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct UserRegistry.Certificate[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_userAddress",
+        type: "address",
+      },
+    ],
+    name: "getUserCertificates",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "address",
+            name: "userAddress",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "authorityAddress",
+            type: "address",
+          },
+          {
+            internalType: "string",
+            name: "certificateId",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "issuanceDate",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "ipfsHash",
+            type: "string",
+          },
+          {
+            internalType: "string",
+            name: "metadataHash",
+            type: "string",
+          },
+          {
+            internalType: "enum UserRegistry.CertificateType",
+            name: "certificateType",
+            type: "uint8",
+          },
+          {
+            internalType: "bool",
+            name: "isVerified",
+            type: "bool",
+          },
+          {
+            internalType: "uint256",
+            name: "timestamp",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct UserRegistry.Certificate[]",
+        name: "",
+        type: "tuple[]",
       },
     ],
     stateMutability: "view",
@@ -233,6 +549,107 @@ export const userRegistryAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "pendingAuthorities",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "pendingCertificates",
+    outputs: [
+      {
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "authorityAddress",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "certificateId",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "issuanceDate",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "ipfsHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "metadataHash",
+        type: "string",
+      },
+      {
+        internalType: "enum UserRegistry.CertificateType",
+        name: "certificateType",
+        type: "uint8",
+      },
+      {
+        internalType: "bool",
+        name: "isVerified",
+        type: "bool",
+      },
+      {
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_userAddress",
+        type: "address",
+      },
+      {
+        internalType: "enum UserRegistry.Role",
+        name: "_newRole",
+        type: "uint8",
+      },
+    ],
+    name: "promoteUser",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -337,20 +754,93 @@ export const userRegistryAbi = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
+        internalType: "address",
+        name: "_userAddress",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "_certificateId",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_reason",
+        type: "string",
       },
     ],
-    name: "pendingAuthorities",
-    outputs: [
+    name: "rejectCertificate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
       {
         internalType: "address",
-        name: "",
+        name: "_authorityAddress",
         type: "address",
+      },
+      {
+        internalType: "string",
+        name: "_certificateId",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_issuanceDate",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_ipfsHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_metadataHash",
+        type: "string",
+      },
+      {
+        internalType: "enum UserRegistry.CertificateType",
+        name: "_certificateType",
+        type: "uint8",
+      },
+    ],
+    name: "requestCertificate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "searchAuthorities",
+    outputs: [
+      {
+        internalType: "address[]",
+        name: "",
+        type: "address[]",
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_department",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_location",
+        type: "string",
+      },
+    ],
+    name: "updateAuthorityDetails",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -367,6 +857,70 @@ export const userRegistryAbi = [
         internalType: "address",
         name: "",
         type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "userCertificates",
+    outputs: [
+      {
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "authorityAddress",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "certificateId",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "issuanceDate",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "ipfsHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "metadataHash",
+        type: "string",
+      },
+      {
+        internalType: "enum UserRegistry.CertificateType",
+        name: "certificateType",
+        type: "uint8",
+      },
+      {
+        internalType: "bool",
+        name: "isVerified",
+        type: "bool",
+      },
+      {
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -424,6 +978,24 @@ export const userRegistryAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_userAddress",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "_certificateId",
+        type: "string",
+      },
+    ],
+    name: "verifyCertificate",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ] as const satisfies Abi;

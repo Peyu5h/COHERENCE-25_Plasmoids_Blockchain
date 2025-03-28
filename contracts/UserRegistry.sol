@@ -10,6 +10,15 @@ contract UserRegistry {
         Admin
     }
 
+    enum CertificateType {
+        Income,
+        Address,
+        Identity,
+        Education,
+        Employment,
+        Other
+    }
+
     struct UserData {
         string name;
         string dob;
@@ -21,10 +30,28 @@ contract UserRegistry {
         bool exists;
     }
 
+    struct Certificate {
+        address userAddress;
+        address authorityAddress;
+        string certificateId;
+        string issuanceDate;
+        string ipfsHash;
+        string metadataHash;
+        CertificateType certificateType;
+        bool isVerified;
+        uint256 timestamp;
+    }
+
     address public admin;
     mapping(address => UserData) public users;
     address[] public userAddresses;
     address[] public pendingAuthorities;
+
+    mapping(address => Certificate[]) public userCertificates;
+    mapping(address => Certificate[]) public pendingCertificates;
+
+    mapping(address => string) public authorityDepartment;
+    mapping(address => string) public authorityLocation;
 
     event UserRegistered(address indexed userAddress, string name, Role role);
     event AuthorityVerified(address indexed authorityAddress, string name);
@@ -33,14 +60,49 @@ contract UserRegistry {
         Role previousRole,
         Role newRole
     );
+    event CertificateRequested(
+        address indexed userAddress,
+        address indexed authorityAddress,
+        string certificateId,
+        CertificateType certificateType
+    );
+    event CertificateVerified(
+        address indexed userAddress,
+        address indexed authorityAddress,
+        string certificateId,
+        CertificateType certificateType
+    );
+    event CertificateRejected(
+        address indexed userAddress,
+        address indexed authorityAddress,
+        string certificateId,
+        string reason
+    );
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can call this function");
+        require(msg.sender == admin, "Not admin");
         _;
     }
 
     modifier userExists() {
-        require(users[msg.sender].exists, "User does not exist");
+        require(users[msg.sender].exists, "User not found");
+        _;
+    }
+
+    modifier onlyAuthority() {
+        require(
+            users[msg.sender].exists &&
+                users[msg.sender].role == Role.Authority,
+            "Not authority"
+        );
+        _;
+    }
+
+    modifier onlyVerifier() {
+        require(
+            users[msg.sender].exists && users[msg.sender].role == Role.Verifier,
+            "Not verifier"
+        );
         _;
     }
 
@@ -66,7 +128,7 @@ contract UserRegistry {
         string memory _physicalAddress,
         string memory _mobileNumber
     ) external {
-        require(!users[msg.sender].exists, "User already registered");
+        require(!users[msg.sender].exists, "Already registered");
 
         users[msg.sender] = UserData({
             name: _name,
@@ -90,7 +152,7 @@ contract UserRegistry {
         string memory _physicalAddress,
         string memory _mobileNumber
     ) external {
-        require(!users[msg.sender].exists, "User already registered");
+        require(!users[msg.sender].exists, "Already registered");
 
         users[msg.sender] = UserData({
             name: _name,
@@ -104,8 +166,15 @@ contract UserRegistry {
         });
 
         userAddresses.push(msg.sender);
-        pendingAuthorities.push(msg.sender);
         emit UserRegistered(msg.sender, _name, Role.Authority);
+    }
+
+    function updateAuthorityDetails(
+        string memory _department,
+        string memory _location
+    ) external onlyAuthority {
+        authorityDepartment[msg.sender] = _department;
+        authorityLocation[msg.sender] = _location;
     }
 
     function registerVerifier(
@@ -115,7 +184,7 @@ contract UserRegistry {
         string memory _physicalAddress,
         string memory _mobileNumber
     ) external {
-        require(!users[msg.sender].exists, "User already registered");
+        require(!users[msg.sender].exists, "Already registered");
 
         users[msg.sender] = UserData({
             name: _name,
@@ -132,55 +201,143 @@ contract UserRegistry {
         emit UserRegistered(msg.sender, _name, Role.Verifier);
     }
 
-    function promoteToVerifier(address _userAddress) external onlyAdmin {
-        require(users[_userAddress].exists, "User does not exist");
+    function requestCertificate(
+        address _authorityAddress,
+        string memory _certificateId,
+        string memory _issuanceDate,
+        string memory _ipfsHash,
+        string memory _metadataHash,
+        CertificateType _certificateType
+    ) external userExists {
         require(
-            users[_userAddress].role < Role.Verifier,
-            "User already has equal or higher role"
+            users[_authorityAddress].exists &&
+                users[_authorityAddress].role == Role.Authority,
+            "Invalid authority"
         );
 
-        Role previousRole = users[_userAddress].role;
-        users[_userAddress].role = Role.Verifier;
+        Certificate memory newCertificate = Certificate({
+            userAddress: msg.sender,
+            authorityAddress: _authorityAddress,
+            certificateId: _certificateId,
+            issuanceDate: _issuanceDate,
+            ipfsHash: _ipfsHash,
+            metadataHash: _metadataHash,
+            certificateType: _certificateType,
+            isVerified: false,
+            timestamp: block.timestamp
+        });
 
-        emit UserPromoted(_userAddress, previousRole, Role.Verifier);
+        pendingCertificates[_authorityAddress].push(newCertificate);
+
+        emit CertificateRequested(
+            msg.sender,
+            _authorityAddress,
+            _certificateId,
+            _certificateType
+        );
     }
 
-    function promoteToAuthority(address _userAddress) external onlyAdmin {
-        require(users[_userAddress].exists, "User does not exist");
-        require(
-            users[_userAddress].role < Role.Authority,
-            "User already has equal or higher role"
+    function verifyCertificate(
+        address _userAddress,
+        string memory _certificateId
+    ) external onlyAuthority {
+        Certificate[] storage pendingCerts = pendingCertificates[msg.sender];
+        bool found = false;
+        uint256 index;
+
+        for (uint i = 0; i < pendingCerts.length; i++) {
+            if (
+                pendingCerts[i].userAddress == _userAddress &&
+                keccak256(bytes(pendingCerts[i].certificateId)) ==
+                keccak256(bytes(_certificateId))
+            ) {
+                found = true;
+                index = i;
+                break;
+            }
+        }
+
+        require(found, "Cert not found");
+
+        Certificate memory verifiedCert = pendingCerts[index];
+        verifiedCert.isVerified = true;
+
+        //adding user's certificate
+        userCertificates[_userAddress].push(verifiedCert);
+
+        // removing from pending list
+        if (index < pendingCerts.length - 1) {
+            pendingCerts[index] = pendingCerts[pendingCerts.length - 1];
+        }
+        pendingCerts.pop();
+
+        emit CertificateVerified(
+            _userAddress,
+            msg.sender,
+            _certificateId,
+            verifiedCert.certificateType
         );
-
-        Role previousRole = users[_userAddress].role;
-        users[_userAddress].role = Role.Authority;
-
-        emit UserPromoted(_userAddress, previousRole, Role.Authority);
     }
 
-    function promoteToAdmin(address _userAddress) external onlyAdmin {
-        require(users[_userAddress].exists, "User does not exist");
+    function rejectCertificate(
+        address _userAddress,
+        string memory _certificateId,
+        string memory _reason
+    ) external onlyAuthority {
+        Certificate[] storage pendingCerts = pendingCertificates[msg.sender];
+        bool found = false;
+        uint256 index;
+
+        for (uint i = 0; i < pendingCerts.length; i++) {
+            if (
+                pendingCerts[i].userAddress == _userAddress &&
+                keccak256(bytes(pendingCerts[i].certificateId)) ==
+                keccak256(bytes(_certificateId))
+            ) {
+                found = true;
+                index = i;
+                break;
+            }
+        }
+
+        require(found, "Cert not found");
+
+        if (index < pendingCerts.length - 1) {
+            pendingCerts[index] = pendingCerts[pendingCerts.length - 1];
+        }
+        pendingCerts.pop();
+
+        emit CertificateRejected(
+            _userAddress,
+            msg.sender,
+            _certificateId,
+            _reason
+        );
+    }
+
+    function promoteUser(
+        address _userAddress,
+        Role _newRole
+    ) external onlyAdmin {
+        require(users[_userAddress].exists, "User not found");
         require(
-            users[_userAddress].role < Role.Admin,
-            "User already has equal or higher role"
+            users[_userAddress].role < _newRole,
+            "User has equal/higher role"
         );
 
         Role previousRole = users[_userAddress].role;
-        users[_userAddress].role = Role.Admin;
+        users[_userAddress].role = _newRole;
 
-        emit UserPromoted(_userAddress, previousRole, Role.Admin);
+        emit UserPromoted(_userAddress, previousRole, _newRole);
     }
 
     function approveAuthority(address _authorityAddress) external onlyAdmin {
-        require(users[_authorityAddress].exists, "Authority does not exist");
+        require(users[_authorityAddress].exists, "Auth not found");
         require(
             users[_authorityAddress].role == Role.Authority,
-            "Not an authority"
+            "Not authority"
         );
-        require(
-            !users[_authorityAddress].isVerified,
-            "Authority already verified"
-        );
+        require(!users[_authorityAddress].isVerified, "Already verified");
 
         users[_authorityAddress].isVerified = true;
 
@@ -216,7 +373,7 @@ contract UserRegistry {
             bool isVerified
         )
     {
-        require(users[_userAddress].exists, "User does not exist");
+        require(users[_userAddress].exists, "User not found");
         UserData memory userData = users[_userAddress];
 
         return (
@@ -255,6 +412,75 @@ contract UserRegistry {
             userData.role,
             userData.isVerified
         );
+    }
+
+    function getUserCertificates(
+        address _userAddress
+    ) external view returns (Certificate[] memory) {
+        return userCertificates[_userAddress];
+    }
+
+    function getPendingCertificates()
+        external
+        view
+        onlyAuthority
+        returns (Certificate[] memory)
+    {
+        return pendingCertificates[msg.sender];
+    }
+
+    function getAuthorityDetails(
+        address _authorityAddress
+    )
+        external
+        view
+        returns (
+            string memory name,
+            string memory department,
+            string memory location,
+            bool isVerified
+        )
+    {
+        require(
+            users[_authorityAddress].exists &&
+                users[_authorityAddress].role == Role.Authority,
+            "Not valid authority"
+        );
+
+        return (
+            users[_authorityAddress].name,
+            authorityDepartment[_authorityAddress],
+            authorityLocation[_authorityAddress],
+            users[_authorityAddress].isVerified
+        );
+    }
+
+    function searchAuthorities() external view returns (address[] memory) {
+        uint validAuthorityCount = 0;
+
+        for (uint i = 0; i < userAddresses.length; i++) {
+            address addr = userAddresses[i];
+            if (users[addr].role == Role.Authority && users[addr].isVerified) {
+                validAuthorityCount++;
+            }
+        }
+
+        address[] memory result = new address[](validAuthorityCount);
+        uint resultIndex = 0;
+
+        for (
+            uint i = 0;
+            i < userAddresses.length && resultIndex < validAuthorityCount;
+            i++
+        ) {
+            address addr = userAddresses[i];
+            if (users[addr].role == Role.Authority && users[addr].isVerified) {
+                result[resultIndex] = addr;
+                resultIndex++;
+            }
+        }
+
+        return result;
     }
 
     function getPendingAuthorities()

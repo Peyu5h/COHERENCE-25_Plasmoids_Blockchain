@@ -1,14 +1,16 @@
 import { Hono } from "hono";
-import user from "./user";
+import userRoute from "./user";
+import certificatesRoute from "./certificates";
 
-const indexRoute = new Hono();
+const app = new Hono();
 
 // test route
-indexRoute.get("/", (c) => {
+app.get("/", (c) => {
   return c.json({ message: "working" });
 });
 
 // routes
-indexRoute.route("/user", user);
+app.route("/user", userRoute);
+app.route("/certificates", certificatesRoute);
 
-export default indexRoute;
+export default app;

@@ -70,14 +70,14 @@ export default function UserDashboard() {
                   className="flex h-24 flex-col items-center justify-center gap-1 p-4"
                 >
                   <IdCardIcon className="h-5 w-5 text-blue-600" />
-                  <span>View ID</span>
+                  <span>Verify someone</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="flex h-24 flex-col items-center justify-center gap-1 p-4"
                 >
                   <ShieldIcon className="h-5 w-5 text-blue-600" />
-                  <span>Privacy Settings</span>
+                  <span>qr related</span>
                 </Button>
                 <Button
                   variant="outline"

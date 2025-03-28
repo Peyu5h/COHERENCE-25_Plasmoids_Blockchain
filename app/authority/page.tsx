@@ -94,6 +94,7 @@ export default function AuthorityDashboard() {
             </CardContent>
           </Card>
 
+          {/* fetch here certificates */}
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Recent Activities</CardTitle>
@@ -102,11 +103,7 @@ export default function AuthorityDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-center text-sm">
-                  No recent activity to display.
-                </p>
-              </div>
+              {/* todo fetching api */}
             </CardContent>
           </Card>
         </div>
