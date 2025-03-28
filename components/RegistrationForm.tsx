@@ -8,16 +8,24 @@ import { useAccount } from "wagmi";
 import { useTransaction } from "~/hooks/useTransaction";
 import { userRegistryAddress, userRegistryAbi } from "~/lib/abi/userRegistry";
 import { cn } from "~/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "~/components/ui/calendar";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "~/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
+import { CalendarIcon, Link2Icon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,9 +37,15 @@ import { Textarea } from "~/components/ui/textarea";
 
 interface RegistrationFormProps {
   formType: "user" | "authority" | "verifier";
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function RegistrationForm({ formType }: RegistrationFormProps) {
+export default function RegistrationForm({
+  formType,
+  isOpen,
+  onClose,
+}: RegistrationFormProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,13 +59,18 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
           : "Verifier"
     } registration successful!`,
     onSuccess: () => {
-      if (formType === "user") {
-        router.push("/dashboard");
-      } else if (formType === "authority") {
-        router.push("/authority");
-      } else if (formType === "verifier") {
-        router.push("/verifier");
-      }
+      setIsSubmitting(false);
+      onClose();
+      // Add a small delay before navigation to allow the success toast to show
+      setTimeout(() => {
+        if (formType === "user") {
+          router.push("/dashboard");
+        } else if (formType === "authority") {
+          router.push("/authority");
+        } else if (formType === "verifier") {
+          router.push("/verifier");
+        }
+      }, 1500);
     },
   });
 
@@ -114,30 +133,46 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
         });
       } catch (error) {
         console.error("Registration error:", error);
-      } finally {
         setIsSubmitting(false);
       }
     },
   });
 
-  const roleColors = {
-    user: "bg-blue-50 border-blue-200",
-    authority: "bg-purple-50 border-purple-200",
-    verifier: "bg-indigo-50 border-indigo-200",
+  const linkAadhar = () => {
+    formik.setValues({
+      name: "Piyush",
+      dob: "2004-12-08",
+      gender: "Male",
+      address:
+        "Happy Homes Society, Sarvodaya Nagar, Bhandup west\n401 C-wing, Happy Homes Society, J.M. road",
+      mobileNumber: "8928937191",
+    });
   };
 
   return (
-    <Card className={cn("mx-auto w-full max-w-md", roleColors[formType])}>
-      <CardHeader>
-        <CardTitle className="text-center capitalize">
-          {formType} Registration
-        </CardTitle>
-        <CardDescription className="text-center">
-          Complete the form below to register your {formType} account
-        </CardDescription>
-      </CardHeader>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center capitalize">
+            {formType} Registration
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            Complete the form below to register your {formType} account
+            {formType === "user" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4 w-full py-4"
+                onClick={linkAadhar}
+              >
+                <Link2Icon className="mr-2 h-4 w-4" />
+                Link my Aadhar
+              </Button>
+            )}
+          </DialogDescription>
+        </DialogHeader>
 
-      <CardContent>
         <form onSubmit={formik.handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -150,32 +185,58 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
               value={formik.values.name}
               className={cn(
                 formik.touched.name && formik.errors.name
-                  ? "border-red-300 focus-visible:ring-red-300"
+                  ? "border-destructive focus-visible:ring-destructive"
                   : "",
               )}
             />
             {formik.touched.name && formik.errors.name && (
-              <p className="text-sm text-red-500">{formik.errors.name}</p>
+              <p className="text-destructive text-sm">{formik.errors.name}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="dob">Date of Birth</Label>
-            <Input
-              id="dob"
-              name="dob"
-              type="date"
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              value={formik.values.dob}
-              className={cn(
-                formik.touched.dob && formik.errors.dob
-                  ? "border-red-300 focus-visible:ring-red-300"
-                  : "",
-              )}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="dob"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formik.values.dob && "text-muted-foreground",
+                    formik.touched.dob &&
+                      formik.errors.dob &&
+                      "border-destructive focus-visible:ring-destructive",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formik.values.dob ? (
+                    format(new Date(formik.values.dob), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={
+                    formik.values.dob ? new Date(formik.values.dob) : undefined
+                  }
+                  onSelect={(date) => {
+                    if (date) {
+                      formik.setFieldValue("dob", format(date, "yyyy-MM-dd"));
+                    }
+                  }}
+                  disabled={(date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             {formik.touched.dob && formik.errors.dob && (
-              <p className="text-sm text-red-500">{formik.errors.dob}</p>
+              <p className="text-destructive text-sm">{formik.errors.dob}</p>
             )}
           </div>
 
@@ -189,7 +250,7 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
               <SelectTrigger
                 className={cn(
                   formik.touched.gender && formik.errors.gender
-                    ? "border-red-300 focus-visible:ring-red-300"
+                    ? "border-destructive focus-visible:ring-destructive"
                     : "",
                 )}
               >
@@ -202,7 +263,7 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
               </SelectContent>
             </Select>
             {formik.touched.gender && formik.errors.gender && (
-              <p className="text-sm text-red-500">{formik.errors.gender}</p>
+              <p className="text-destructive text-sm">{formik.errors.gender}</p>
             )}
           </div>
 
@@ -216,13 +277,15 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
               value={formik.values.address}
               className={cn(
                 formik.touched.address && formik.errors.address
-                  ? "border-red-300 focus-visible:ring-red-300"
+                  ? "border-destructive focus-visible:ring-destructive"
                   : "",
               )}
               rows={3}
             />
             {formik.touched.address && formik.errors.address && (
-              <p className="text-sm text-red-500">{formik.errors.address}</p>
+              <p className="text-destructive text-sm">
+                {formik.errors.address}
+              </p>
             )}
           </div>
 
@@ -237,44 +300,42 @@ export default function RegistrationForm({ formType }: RegistrationFormProps) {
               value={formik.values.mobileNumber}
               className={cn(
                 formik.touched.mobileNumber && formik.errors.mobileNumber
-                  ? "border-red-300 focus-visible:ring-red-300"
+                  ? "border-destructive focus-visible:ring-destructive"
                   : "",
               )}
             />
             {formik.touched.mobileNumber && formik.errors.mobileNumber && (
-              <p className="text-sm text-red-500">
+              <p className="text-destructive text-sm">
                 {formik.errors.mobileNumber}
               </p>
             )}
           </div>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting || isLoading || !isConnected}
-            className={cn(
-              "w-full",
-              isSubmitting || isLoading || !isConnected
-                ? "cursor-not-allowed opacity-70"
-                : "",
-              formType === "user"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : formType === "authority"
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : "bg-indigo-600 hover:bg-indigo-700",
-            )}
-          >
-            {isSubmitting || isLoading
-              ? "Processing..."
-              : `Register as ${
-                  formType === "user"
-                    ? "User"
-                    : formType === "authority"
-                      ? "Authority"
-                      : "Verifier"
-                }`}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={isSubmitting || isLoading || !isConnected}
+              className={cn(
+                "w-full",
+                isSubmitting || isLoading || !isConnected
+                  ? "cursor-not-allowed opacity-70"
+                  : "",
+                "bg-primary hover:bg-primary/90",
+              )}
+            >
+              {isSubmitting || isLoading
+                ? "Processing..."
+                : `Register as ${
+                    formType === "user"
+                      ? "User"
+                      : formType === "authority"
+                        ? "Authority"
+                        : "Verifier"
+                  }`}
+            </Button>
+          </div>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

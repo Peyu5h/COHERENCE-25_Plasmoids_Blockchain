@@ -148,10 +148,9 @@ export default function RequestCertificateForm() {
 
       <CardContent>
         <form onSubmit={formik.handleSubmit} className="space-y-6">
-        <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="authorityAddress">Select Authority</Label>
-            <Select
-            >
+            <Select>
               <SelectTrigger id="authorityAddress">
                 <SelectValue placeholder="Select an authority" />
               </SelectTrigger>
@@ -253,7 +252,7 @@ export default function RequestCertificateForm() {
                 <div className="flex text-sm text-gray-600">
                   <label
                     htmlFor="image-upload"
-                    className="relative cursor-pointer rounded-md bg-white font-medium text-blue-600 focus-within:outline-none hover:text-blue-500"
+                    className="relative cursor-pointer rounded-md font-medium text-blue-600 focus-within:outline-none hover:text-blue-500"
                   >
                     <span>Upload an image</span>
                     <input

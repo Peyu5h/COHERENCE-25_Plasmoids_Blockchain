@@ -56,7 +56,7 @@ export default function AdminPage() {
       case 3:
         return "Admin";
       default:
-        return "Unknown";
+        return "Admin";
     }
   };
 
@@ -96,7 +96,7 @@ export default function AdminPage() {
   return (
     <RoleProtectedRoute requiredRole={UserRole.Admin}>
       <div className="container mx-auto py-8">
-        <Card className="mb-8 bg-white">
+        <Card className="bg-background mb-8">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
@@ -105,9 +105,6 @@ export default function AdminPage() {
                 </CardTitle>
                 <CardDescription>Manage users and assign roles</CardDescription>
               </div>
-              <Badge variant="outline" className="px-4 py-2">
-                Admin Panel
-              </Badge>
             </div>
           </CardHeader>
         </Card>

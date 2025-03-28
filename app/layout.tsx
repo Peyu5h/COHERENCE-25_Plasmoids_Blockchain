@@ -18,7 +18,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="text-foreground bg-background min-h-screen antialiased">
+      <body className="dark text-foreground bg-background min-h-screen antialiased">
         <Web3Provider cookies={cookies}>{children}</Web3Provider>
         <Toaster />
       </body>
