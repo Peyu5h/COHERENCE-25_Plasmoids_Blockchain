@@ -138,7 +138,7 @@ export default function RequestCertificateForm() {
   const { users, isLoading: isUsersLoading } = useAllUsers();
 
   return (
-    <Card className="mx-auto w-full max-w-lg">
+    <Card className="mx-auto w-full max-w-lg border-0">
       <CardHeader>
         <CardTitle className="text-center">Add Income Certificate</CardTitle>
         <CardDescription className="text-center">
