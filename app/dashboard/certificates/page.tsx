@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useUserRole } from "~/hooks/useUserRole";
 import RoleProtectedRoute from "~/components/RoleProtectedRoute";
-import CertificatesList from "~/components/CertificatesList";
-import RequestCertificateForm from "~/components/RequestCertificateForm";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -16,6 +14,8 @@ import {
 } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { FileText, Plus } from "lucide-react";
+import CertificatesList from "~/components/CertificatesList";
+import RequestCertificateForm from "~/components/RequestCertificateForm";
 
 export default function CertificatesPage() {
   const { address, isConnected } = useAccount();
@@ -89,14 +89,12 @@ export default function CertificatesPage() {
                   View and manage all your digital certificates
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <CertificatesList />
-              </CardContent>
+              <CardContent><CertificatesList/></CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="request">
-            <RequestCertificateForm />
+            <RequestCertificateForm/>
           </TabsContent>
         </Tabs>
       </div>

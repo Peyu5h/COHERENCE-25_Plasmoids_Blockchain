@@ -14,6 +14,7 @@ import { Badge } from "~/components/ui/badge";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { CalendarIcon, ClipboardIcon, CheckCircleIcon } from "lucide-react";
+import Link from "next/link";
 
 export default function AuthorityDashboard() {
   const { address } = useAccount();
@@ -80,8 +81,13 @@ export default function AuthorityDashboard() {
                   variant="outline"
                   className="flex h-24 flex-col items-center justify-center gap-1 p-4"
                 >
-                  <CheckCircleIcon className="h-5 w-5 text-purple-600" />
-                  <span>Verify Document</span>
+                  <Link
+                    className="flex h-24 flex-col items-center justify-center gap-1 p-4"
+                    href={"/authority/certificates"}
+                  >
+                    <CheckCircleIcon className="h-5 w-5 text-purple-600" />
+                    <span>Verify Document</span>
+                  </Link>
                 </Button>
                 <Button
                   variant="outline"
@@ -102,9 +108,7 @@ export default function AuthorityDashboard() {
                 Your recent authority activities
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* todo fetching api */}
-            </CardContent>
+            <CardContent>{/* todo fetching api */}</CardContent>
           </Card>
         </div>
       </div>
