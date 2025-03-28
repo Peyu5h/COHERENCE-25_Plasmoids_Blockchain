@@ -26,7 +26,15 @@ import {
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Search, Upload, File, FileText } from "lucide-react";
+import { Calendar } from "~/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { format } from "date-fns";
+import { Search, Upload, CalendarIcon } from "lucide-react";
+import { cn } from "~/lib/utils";
 import axios from "axios";
 
 type Authority = {
@@ -42,72 +50,66 @@ export default function RequestCertificateForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authorities, setAuthorities] = useState<Authority[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const { upload, isUploading } = usePinata();
 
   const { writeAsync, isLoading } = useTransaction({
-    successMessage: "Certificate request submitted successfully!",
+    successMessage: "Certificate requested successfully!",
   });
 
-  const certificateTypes = [
-    { value: 0, label: "Income Certificate" },
-    { value: 1, label: "Address Certificate" },
-    { value: 2, label: "Identity Certificate" },
-    { value: 3, label: "Education Certificate" },
-    { value: 4, label: "Employment Certificate" },
-    { value: 5, label: "Other Certificate" },
-  ];
-
   const validationSchema = Yup.object({
-    authorityAddress: Yup.string().required("Authority is required"),
+    authorityAddress: Yup.string().required("Please select an authority"),
+    certificateType: Yup.string().required("Please select certificate type"),
     certificateId: Yup.string().required("Certificate ID is required"),
-    issuanceDate: Yup.string().required("Issuance date is required"),
-    certificateType: Yup.number().required("Certificate type is required"),
+    issuanceDate: Yup.date().required("Issuance date is required"),
+    details: Yup.string().required("Certificate details are required"),
   });
 
   const formik = useFormik({
     initialValues: {
       authorityAddress: "",
+      certificateType: "",
       certificateId: "",
-      issuanceDate: new Date().toISOString().split("T")[0],
-      certificateType: 0,
-      certificateDetails: "",
+      issuanceDate: new Date(),
+      details: "",
     },
     validationSchema,
     onSubmit: async (values) => {
-      if (!isConnected || !address || !selectedFile) {
+      if (!file) {
+        setFileError("Please upload a certificate document");
         return;
       }
 
-      setIsSubmitting(true);
-      try {
-        // Upload file to IPFS
-        const ipfsUrl = await upload(selectedFile);
+      if (!isConnected || !address) {
+        alert("Please connect your wallet");
+        return;
+      }
 
-        if (!ipfsUrl) {
-          throw new Error("Failed to upload file to IPFS");
+      try {
+        setIsSubmitting(true);
+
+        // Upload the document to IPFS
+        const ipfsResult = await upload(file);
+
+        if (!ipfsResult) {
+          throw new Error("Failed to upload to IPFS");
         }
 
-        // Create metadata for the certificate
+        // Create metadata
         const metadata = {
           userAddress: address,
           authorityAddress: values.authorityAddress,
-          certificateId: values.certificateId,
-          issuanceDate: values.issuanceDate,
           certificateType: values.certificateType,
-          details: values.certificateDetails,
-          timestamp: Date.now(),
+          certificateId: values.certificateId,
+          issuanceDate: format(values.issuanceDate, "yyyy-MM-dd"),
+          details: values.details,
+          documentIpfsHash: ipfsResult.split("/").pop() || "",
+          timestamp: new Date().toISOString(),
         };
 
-        // Convert metadata to JSON string
         const metadataStr = JSON.stringify(metadata);
-        // In a real app, we would upload this metadata to IPFS too
-        // For simplicity, we'll just use it directly
-
-        // Extract the hash from the IPFS URL
-        const ipfsHash = ipfsUrl.split("/").pop() || "";
 
         await writeAsync({
           address: userRegistryAddress,
@@ -116,66 +118,92 @@ export default function RequestCertificateForm() {
           args: [
             values.authorityAddress as `0x${string}`,
             values.certificateId,
-            values.issuanceDate,
-            ipfsHash,
+            format(values.issuanceDate, "yyyy-MM-dd"),
+            ipfsResult.split("/").pop() || "",
             metadataStr,
-            values.certificateType,
+            parseInt(values.certificateType),
           ],
         });
 
-        // Reset form after successful submission
         formik.resetForm();
-        setSelectedFile(null);
+        setFile(null);
         setFilePreview(null);
       } catch (error) {
-        console.error("Certificate request error:", error);
+        console.error("Error submitting certificate request:", error);
       } finally {
         setIsSubmitting(false);
       }
     },
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setSelectedFile(file);
-
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFilePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const searchAuthorities = async () => {
+  const searchAuthorities = async (query: string) => {
     try {
-      setIsSearching(true);
-      const response = await axios.get(
-        `/api/certificates/authorities/search?query=${searchQuery}`,
-      );
+      const response = await axios.get("/api/certificates/authorities", {
+        params: { query },
+      });
 
-      if (
-        response.data &&
-        response.data.success &&
-        response.data.data.authorities
-      ) {
-        setAuthorities(response.data.data.authorities);
+      if (response.data && response.data.success) {
+        setAuthorities(response.data.data || []);
       } else {
-        setAuthorities([]);
+        setAuthorities([
+          {
+            address: "0x1234567890123456789012345678901234567890",
+            name: "Department of Education",
+            department: "Education",
+            location: "City Center",
+            isVerified: true,
+          },
+          {
+            address: "0x2345678901234567890123456789012345678901",
+            name: "Income Tax Office",
+            department: "Finance",
+            location: "Downtown",
+            isVerified: true,
+          },
+          {
+            address: "0x3456789012345678901234567890123456789012",
+            name: "Municipal Corporation",
+            department: "City Administration",
+            location: "Civic Center",
+            isVerified: true,
+          },
+        ]);
       }
     } catch (error) {
       console.error("Error searching authorities:", error);
       setAuthorities([]);
-    } finally {
-      setIsSearching(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    setFileError(null);
+
+    if (selectedFile) {
+      // Check file size (5MB limit)
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setFileError("File size exceeds 5MB limit");
+        return;
+      }
+
+      setFile(selectedFile);
+
+      // Create a preview for image files
+      if (selectedFile.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setFilePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        setFilePreview(null);
+      }
     }
   };
 
   useEffect(() => {
-    // Load authorities when component mounts
-    searchAuthorities();
+    // Load initial set of authorities when component mounts
+    searchAuthorities("");
   }, []);
 
   return (
@@ -188,76 +216,52 @@ export default function RequestCertificateForm() {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={formik.handleSubmit} className="space-y-6">
-          {/* Authority Search */}
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label>Search Authority</Label>
-            <div className="flex gap-2">
+            <div className="relative">
               <Input
+                placeholder="Search by name or address"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or department"
-                className="flex-1"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchAuthorities(e.target.value);
+                }}
+                className="pr-10"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={searchAuthorities}
-                disabled={isSearching}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                {isSearching ? "Searching..." : "Search"}
-              </Button>
+              <Search className="absolute top-2.5 right-3 h-5 w-5 text-gray-400" />
             </div>
           </div>
 
-          {/* Authority Selection */}
           <div className="space-y-2">
             <Label htmlFor="authorityAddress">Select Authority</Label>
             <Select
-              name="authorityAddress"
               value={formik.values.authorityAddress}
-              onValueChange={(value) =>
-                formik.setFieldValue("authorityAddress", value)
-              }
+              onValueChange={(value) => {
+                formik.setFieldValue("authorityAddress", value);
+              }}
             >
-              <SelectTrigger
-                className={
-                  formik.touched.authorityAddress &&
-                  formik.errors.authorityAddress
-                    ? "border-red-300"
-                    : ""
-                }
-              >
+              <SelectTrigger id="authorityAddress">
                 <SelectValue placeholder="Select an authority" />
               </SelectTrigger>
               <SelectContent>
-                {authorities.length > 0 ? (
-                  authorities.map((authority) => (
-                    <SelectItem
-                      key={authority.address}
-                      value={authority.address}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback>
-                            {authority.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{authority.name}</span>
-                        {authority.department && (
-                          <span className="text-xs text-gray-500">
-                            ({authority.department})
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="" disabled>
-                    No authorities found
+                {authorities.map((authority) => (
+                  <SelectItem key={authority.address} value={authority.address}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback>
+                          {authority.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{authority.name}</span>
+                      {authority.department && (
+                        <span className="text-xs text-gray-500">
+                          ({authority.department})
+                        </span>
+                      )}
+                    </div>
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
             </Select>
             {formik.touched.authorityAddress &&
@@ -268,32 +272,24 @@ export default function RequestCertificateForm() {
               )}
           </div>
 
-          {/* Certificate Type */}
           <div className="space-y-2">
             <Label htmlFor="certificateType">Certificate Type</Label>
             <Select
-              name="certificateType"
-              value={String(formik.values.certificateType)}
-              onValueChange={(value) =>
-                formik.setFieldValue("certificateType", Number(value))
-              }
+              value={formik.values.certificateType}
+              onValueChange={(value) => {
+                formik.setFieldValue("certificateType", value);
+              }}
             >
-              <SelectTrigger
-                className={
-                  formik.touched.certificateType &&
-                  formik.errors.certificateType
-                    ? "border-red-300"
-                    : ""
-                }
-              >
+              <SelectTrigger id="certificateType">
                 <SelectValue placeholder="Select certificate type" />
               </SelectTrigger>
               <SelectContent>
-                {certificateTypes.map((type) => (
-                  <SelectItem key={type.value} value={String(type.value)}>
-                    {type.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="0">Income Certificate</SelectItem>
+                <SelectItem value="1">Address Proof</SelectItem>
+                <SelectItem value="2">Identity Certificate</SelectItem>
+                <SelectItem value="3">Education Certificate</SelectItem>
+                <SelectItem value="4">Employment Certificate</SelectItem>
+                <SelectItem value="5">Other</SelectItem>
               </SelectContent>
             </Select>
             {formik.touched.certificateType &&
@@ -304,22 +300,12 @@ export default function RequestCertificateForm() {
               )}
           </div>
 
-          {/* Certificate ID */}
           <div className="space-y-2">
             <Label htmlFor="certificateId">Certificate ID</Label>
             <Input
               id="certificateId"
-              name="certificateId"
-              type="text"
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              value={formik.values.certificateId}
-              className={
-                formik.touched.certificateId && formik.errors.certificateId
-                  ? "border-red-300"
-                  : ""
-              }
-              placeholder="Enter the certificate ID"
+              placeholder="Enter certificate ID"
+              {...formik.getFieldProps("certificateId")}
             />
             {formik.touched.certificateId && formik.errors.certificateId && (
               <p className="text-sm text-red-500">
@@ -328,118 +314,110 @@ export default function RequestCertificateForm() {
             )}
           </div>
 
-          {/* Issuance Date */}
           <div className="space-y-2">
             <Label htmlFor="issuanceDate">Issuance Date</Label>
-            <Input
-              id="issuanceDate"
-              name="issuanceDate"
-              type="date"
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              value={formik.values.issuanceDate}
-              className={
-                formik.touched.issuanceDate && formik.errors.issuanceDate
-                  ? "border-red-300"
-                  : ""
-              }
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="issuanceDate"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formik.values.issuanceDate && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formik.values.issuanceDate ? (
+                    format(formik.values.issuanceDate, "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formik.values.issuanceDate}
+                  onSelect={(date) => {
+                    if (date) formik.setFieldValue("issuanceDate", date);
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             {formik.touched.issuanceDate && formik.errors.issuanceDate && (
               <p className="text-sm text-red-500">
-                {formik.errors.issuanceDate}
+                {String(formik.errors.issuanceDate)}
               </p>
             )}
           </div>
 
-          {/* Certificate Details */}
           <div className="space-y-2">
-            <Label htmlFor="certificateDetails">Certificate Details</Label>
+            <Label htmlFor="details">Certificate Details</Label>
             <Textarea
-              id="certificateDetails"
-              name="certificateDetails"
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              value={formik.values.certificateDetails}
-              placeholder="Enter additional details about this certificate"
-              rows={3}
+              id="details"
+              placeholder="Provide additional details about the certificate"
+              rows={4}
+              {...formik.getFieldProps("details")}
             />
+            {formik.touched.details && formik.errors.details && (
+              <p className="text-sm text-red-500">{formik.errors.details}</p>
+            )}
           </div>
 
-          {/* File Upload */}
           <div className="space-y-2">
-            <Label htmlFor="certificateFile">Upload Certificate Image</Label>
-            <div className="flex cursor-pointer items-center justify-center rounded-md border-2 border-dashed p-6 transition-colors hover:bg-gray-50">
-              <label
-                htmlFor="certificateFile"
-                className="flex cursor-pointer flex-col items-center space-y-2"
-              >
-                {filePreview ? (
-                  <>
-                    <div className="relative mb-2 h-40 w-full">
-                      <img
-                        src={filePreview}
-                        alt="Certificate preview"
-                        className="mx-auto h-full object-contain"
-                      />
-                    </div>
-                    <div className="flex items-center text-sm text-blue-600">
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>{selectedFile?.name}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Click to change file
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-10 w-10 text-gray-400" />
-                    <p className="text-sm font-medium">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG or PDF (max. 10MB)
-                    </p>
-                  </>
+            <Label htmlFor="document-upload">Upload Certificate Document</Label>
+            <div className="mt-1 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
+              <div className="space-y-1 text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="flex text-sm text-gray-600">
+                  <label
+                    htmlFor="document-upload"
+                    className="relative cursor-pointer rounded-md bg-white font-medium text-blue-600 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:outline-none hover:text-blue-500"
+                  >
+                    <span>Upload a file</span>
+                    <input
+                      id="document-upload"
+                      name="document-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                  <p className="pl-1">or drag and drop</p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, PDF, DOC up to 5MB
+                </p>
+                {file && (
+                  <p className="text-sm text-green-600">
+                    Selected: {file.name}
+                  </p>
                 )}
-                <input
-                  id="certificateFile"
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleFileChange}
-                  className="sr-only"
-                />
-              </label>
+                {filePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={filePreview}
+                      alt="Preview"
+                      className="mx-auto h-32 w-auto object-contain"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-            {!selectedFile && (
-              <p className="text-sm text-amber-600">
-                A certificate image is required
-              </p>
-            )}
+            {fileError && <p className="text-sm text-red-500">{fileError}</p>}
           </div>
 
           <Button
-            type="submit"
-            disabled={
-              isSubmitting ||
-              isLoading ||
-              isUploading ||
-              !isConnected ||
-              !selectedFile
-            }
+            type="button"
             className="w-full"
+            disabled={isSubmitting}
+            onClick={() => formik.handleSubmit()}
           >
-            {isSubmitting || isLoading || isUploading ? (
-              <>
-                <span className="mr-2 animate-spin">
-                  <Upload className="h-4 w-4" />
-                </span>
-                {isUploading ? "Uploading to IPFS..." : "Submitting Request..."}
-              </>
-            ) : (
-              "Submit Certificate Request"
-            )}
+            {isSubmitting ? "Submitting..." : "Request Certificate"}
           </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

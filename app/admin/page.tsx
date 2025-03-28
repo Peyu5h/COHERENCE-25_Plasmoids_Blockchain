@@ -34,13 +34,6 @@ export default function AdminPage() {
   const { users, isLoading: usersLoading, refetchUsers } = useAllUsers();
   const [activeTab, setActiveTab] = useState("all");
 
-  const { writeAsync, isLoading: txLoading } = useTransaction({
-    successMessage: "User role updated successfully!",
-    onSuccess: () => {
-      refetchUsers();
-    },
-  });
-
   if (roleLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -89,54 +82,6 @@ export default function AdminPage() {
     }
 
     return <Badge className={className}>{text}</Badge>;
-  };
-
-  const handlePromoteToVerifier = async (userAddress: string) => {
-    if (txLoading) return;
-
-    try {
-      await writeAsync({
-        address: userRegistryAddress,
-        abi: userRegistryAbi,
-        functionName: "promoteToVerifier",
-        args: [userAddress],
-      });
-    } catch (error) {
-      console.error("Failed to promote to verifier:", error);
-      toast.error("Failed to promote user to verifier");
-    }
-  };
-
-  const handlePromoteToAuthority = async (userAddress: string) => {
-    if (txLoading) return;
-
-    try {
-      await writeAsync({
-        address: userRegistryAddress,
-        abi: userRegistryAbi,
-        functionName: "promoteToAuthority",
-        args: [userAddress],
-      });
-    } catch (error) {
-      console.error("Failed to promote to authority:", error);
-      toast.error("Failed to promote user to authority");
-    }
-  };
-
-  const handlePromoteToAdmin = async (userAddress: string) => {
-    if (txLoading) return;
-
-    try {
-      await writeAsync({
-        address: userRegistryAddress,
-        abi: userRegistryAbi,
-        functionName: "promoteToAdmin",
-        args: [userAddress],
-      });
-    } catch (error) {
-      console.error("Failed to promote to admin:", error);
-      toast.error("Failed to promote user to admin");
-    }
   };
 
   const filteredUsers = users.filter((user) => {
@@ -213,7 +158,6 @@ export default function AdminPage() {
                           <TableHead>User</TableHead>
                           <TableHead>Wallet Address</TableHead>
                           <TableHead>Role</TableHead>
-                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -238,52 +182,6 @@ export default function AdminPage() {
                               {`${user.walletAddress.substring(0, 6)}...${user.walletAddress.substring(user.walletAddress.length - 4)}`}
                             </TableCell>
                             <TableCell>{getRoleBadge(user.role)}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                {user.role < 1 && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handlePromoteToAuthority(
-                                        user.walletAddress,
-                                      )
-                                    }
-                                    disabled={txLoading}
-                                  >
-                                    Make Authority
-                                  </Button>
-                                )}
-                                {user.role < 2 && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handlePromoteToVerifier(
-                                        user.walletAddress,
-                                      )
-                                    }
-                                    disabled={txLoading}
-                                    className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                                  >
-                                    Make Verifier
-                                  </Button>
-                                )}
-                                {user.role < 3 && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handlePromoteToAdmin(user.walletAddress)
-                                    }
-                                    disabled={txLoading}
-                                    className="border-red-200 text-red-700 hover:bg-red-50"
-                                  >
-                                    Make Admin
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

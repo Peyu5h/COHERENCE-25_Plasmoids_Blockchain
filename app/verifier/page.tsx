@@ -57,7 +57,6 @@ export default function VerifierDashboard() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Verification Operations</CardTitle>

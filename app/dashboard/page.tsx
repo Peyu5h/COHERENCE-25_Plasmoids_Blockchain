@@ -10,10 +10,21 @@ import {
   CardTitle,
   CardDescription,
 } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import { Badge } from "~/components/ui/badge";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
-import { IdCardIcon, ShieldIcon, FileTextIcon } from "lucide-react";
+import { IdCardIcon, ShieldIcon, FileTextIcon, Plus } from "lucide-react";
+import CertificatesList from "~/components/CertificatesList";
+import RegistrationForm from "~/components/RegistrationForm";
+import RequestCertificateForm from "~/components/RequestCertificateForm";
 
 export default function UserDashboard() {
   const { address } = useAccount();
@@ -58,51 +69,31 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Digital Identity</CardTitle>
-              <CardDescription>Manage your digital identity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Button
-                  variant="outline"
-                  className="flex h-24 flex-col items-center justify-center gap-1 p-4"
-                >
-                  <IdCardIcon className="h-5 w-5 text-blue-600" />
-                  <span>Verify someone</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex h-24 flex-col items-center justify-center gap-1 p-4"
-                >
-                  <ShieldIcon className="h-5 w-5 text-blue-600" />
-                  <span>qr related</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex h-24 flex-col items-center justify-center gap-1 p-4 sm:col-span-2"
-                >
-                  <FileTextIcon className="h-5 w-5 text-blue-600" />
-                  <span>Request Certificate</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle>Certificates & Documents</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <div className="">Certificates & Documents</div>
+                <div className="">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Register Certificate
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <RequestCertificateForm />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardTitle>
               <CardDescription>
                 Your verified documents and certificates
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-center text-sm">
-                  You don&apos;t have any verified documents or certificates
-                  yet.
-                </p>
+                <CertificatesList />
               </div>
             </CardContent>
           </Card>
