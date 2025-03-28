@@ -14,6 +14,8 @@ import {
 } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { FileText, Plus } from "lucide-react";
+import CertificatesList from "~/components/CertificatesList";
+import RequestCertificateForm from "~/components/RequestCertificateForm";
 
 export default function CertificatesPage() {
   const { address, isConnected } = useAccount();
@@ -87,12 +89,12 @@ export default function CertificatesPage() {
                   View and manage all your digital certificates
                 </CardDescription>
               </CardHeader>
-              <CardContent>{/* todo - certificate page */}</CardContent>
+              <CardContent><CertificatesList/></CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="request">
-            {/* todo Request certificate form */}
+            <RequestCertificateForm/>
           </TabsContent>
         </Tabs>
       </div>
