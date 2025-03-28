@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useUserRole } from "~/hooks/useUserRole";
 import RoleProtectedRoute from "~/components/RoleProtectedRoute";
+import CertificatesList from "~/components/CertificatesList";
+import RequestCertificateForm from "~/components/RequestCertificateForm";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -87,12 +89,14 @@ export default function CertificatesPage() {
                   View and manage all your digital certificates
                 </CardDescription>
               </CardHeader>
-              <CardContent>{/* todo - certificate page */}</CardContent>
+              <CardContent>
+                <CertificatesList />
+              </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="request">
-            {/* todo Request certificate form */}
+            <RequestCertificateForm />
           </TabsContent>
         </Tabs>
       </div>
