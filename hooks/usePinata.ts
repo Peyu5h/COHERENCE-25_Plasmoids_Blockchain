@@ -4,10 +4,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import axios from "axios";
 
-const JWT = process.env.PINATA_JWT;
+const JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJiMTc3ZTRmNy05MmYxLTQ5MWEtYTBkNi1jMWJkNmIwZjJhZTgiLCJlbWFpbCI6InBpeXVzaHZiYWd1bDkxNkBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiNGZmNjRhZWI4NmQ2OWExMzRkZTYiLCJzY29wZWRLZXlTZWNyZXQiOiJhMzFjMGQ1Zjc2YzFlZWY1YTk2MzM1NTJhMmNkNjU5Mzk0NzBhOTNkM2QwMTM4OTQzODk0YWI4MDQ5NGM0MTM1IiwiZXhwIjoxNzc0NzE3NTIzfQ.lk1A7JYMwbL9Ijbj7pjLCxrM5IFOD1_1eJuIIVXm-vw";
 
 export const getIPFSGatewayURL = (hash: string): string => {
-  return `https://gateway.pinata.cloud/ipfs/${hash}`;
+  if (hash.startsWith("https://gateway.pinata.cloud/ipfs/")) {
+    return hash;
+  }
+  const cleanHash = hash.replace("ipfs://", "").replace("/ipfs/", "");
+  return `https://gateway.pinata.cloud/ipfs/${cleanHash}`;
 };
 
 const pinataApi = axios.create({

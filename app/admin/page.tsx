@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { useUserRole } from "~/hooks/useUserRole";
+import { UserRole, useUserRole } from "~/hooks/useUserRole";
 import RoleProtectedRoute from "~/components/RoleProtectedRoute";
 import { useTransaction } from "~/hooks/useTransaction";
 import { useAllUsers } from "~/hooks/useAllUsers";
@@ -94,7 +94,7 @@ export default function AdminPage() {
   });
 
   return (
-    <RoleProtectedRoute requiredRole="admin">
+    <RoleProtectedRoute requiredRole={UserRole.Admin}>
       <div className="container mx-auto py-8">
         <Card className="mb-8 bg-white">
           <CardHeader className="pb-4">

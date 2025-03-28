@@ -11,12 +11,7 @@ contract UserRegistry {
     }
 
     enum CertificateType {
-        Income,
-        Address,
-        Identity,
-        Education,
-        Employment,
-        Other
+        Income
     }
 
     struct UserData {
@@ -32,14 +27,13 @@ contract UserRegistry {
 
     struct Certificate {
         address userAddress;
-        address authorityAddress;
         string certificateId;
         string issuanceDate;
         string ipfsHash;
-        string metadataHash;
         CertificateType certificateType;
         bool isVerified;
         uint256 timestamp;
+        string metadata;
     }
 
     address public admin;
@@ -60,21 +54,19 @@ contract UserRegistry {
         Role previousRole,
         Role newRole
     );
-    event CertificateRequested(
+    event CertificateUploaded(
         address indexed userAddress,
-        address indexed authorityAddress,
         string certificateId,
-        CertificateType certificateType
+        CertificateType certificateType,
+        bool isVerified
     );
-    event CertificateVerified(
+    event CertificateMockApproved(
         address indexed userAddress,
-        address indexed authorityAddress,
         string certificateId,
-        CertificateType certificateType
+        string message
     );
-    event CertificateRejected(
+    event CertificateMockRejected(
         address indexed userAddress,
-        address indexed authorityAddress,
         string certificateId,
         string reason
     );
@@ -201,118 +193,50 @@ contract UserRegistry {
         emit UserRegistered(msg.sender, _name, Role.Verifier);
     }
 
-    function requestCertificate(
-        address _authorityAddress,
+    function uploadCertificate(
         string memory _certificateId,
         string memory _issuanceDate,
         string memory _ipfsHash,
-        string memory _metadataHash,
-        CertificateType _certificateType
+        string memory _metadata
     ) external userExists {
-        require(
-            users[_authorityAddress].exists &&
-                users[_authorityAddress].role == Role.Authority,
-            "Invalid authority"
-        );
-
         Certificate memory newCertificate = Certificate({
             userAddress: msg.sender,
-            authorityAddress: _authorityAddress,
             certificateId: _certificateId,
             issuanceDate: _issuanceDate,
             ipfsHash: _ipfsHash,
-            metadataHash: _metadataHash,
-            certificateType: _certificateType,
-            isVerified: false,
-            timestamp: block.timestamp
+            certificateType: CertificateType.Income,
+            isVerified: true,
+            timestamp: block.timestamp,
+            metadata: _metadata
         });
 
-        pendingCertificates[_authorityAddress].push(newCertificate);
+        userCertificates[msg.sender].push(newCertificate);
 
-        emit CertificateRequested(
+        emit CertificateUploaded(
             msg.sender,
-            _authorityAddress,
             _certificateId,
-            _certificateType
+            CertificateType.Income,
+            true
         );
     }
 
-    function verifyCertificate(
+    function mockApproveCertificate(
         address _userAddress,
         string memory _certificateId
     ) external onlyAuthority {
-        Certificate[] storage pendingCerts = pendingCertificates[msg.sender];
-        bool found = false;
-        uint256 index;
-
-        for (uint i = 0; i < pendingCerts.length; i++) {
-            if (
-                pendingCerts[i].userAddress == _userAddress &&
-                keccak256(bytes(pendingCerts[i].certificateId)) ==
-                keccak256(bytes(_certificateId))
-            ) {
-                found = true;
-                index = i;
-                break;
-            }
-        }
-
-        require(found, "Cert not found");
-
-        Certificate memory verifiedCert = pendingCerts[index];
-        verifiedCert.isVerified = true;
-
-        //adding user's certificate
-        userCertificates[_userAddress].push(verifiedCert);
-
-        // removing from pending list
-        if (index < pendingCerts.length - 1) {
-            pendingCerts[index] = pendingCerts[pendingCerts.length - 1];
-        }
-        pendingCerts.pop();
-
-        emit CertificateVerified(
+        emit CertificateMockApproved(
             _userAddress,
-            msg.sender,
             _certificateId,
-            verifiedCert.certificateType
+            "Certificate mock approved"
         );
     }
 
-    function rejectCertificate(
+    function mockRejectCertificate(
         address _userAddress,
         string memory _certificateId,
         string memory _reason
     ) external onlyAuthority {
-        Certificate[] storage pendingCerts = pendingCertificates[msg.sender];
-        bool found = false;
-        uint256 index;
-
-        for (uint i = 0; i < pendingCerts.length; i++) {
-            if (
-                pendingCerts[i].userAddress == _userAddress &&
-                keccak256(bytes(pendingCerts[i].certificateId)) ==
-                keccak256(bytes(_certificateId))
-            ) {
-                found = true;
-                index = i;
-                break;
-            }
-        }
-
-        require(found, "Cert not found");
-
-        if (index < pendingCerts.length - 1) {
-            pendingCerts[index] = pendingCerts[pendingCerts.length - 1];
-        }
-        pendingCerts.pop();
-
-        emit CertificateRejected(
-            _userAddress,
-            msg.sender,
-            _certificateId,
-            _reason
-        );
+        emit CertificateMockRejected(_userAddress, _certificateId, _reason);
     }
 
     function promoteUser(
@@ -427,6 +351,28 @@ contract UserRegistry {
         returns (Certificate[] memory)
     {
         return pendingCertificates[msg.sender];
+    }
+
+    function getAllUsersCertificates()
+        external
+        view
+        onlyAuthority
+        returns (
+            address[] memory userAddrs,
+            Certificate[][] memory certificates
+        )
+    {
+        uint256 userCount = userAddresses.length;
+        userAddrs = new address[](userCount);
+        certificates = new Certificate[][](userCount);
+
+        for (uint i = 0; i < userCount; i++) {
+            address userAddr = userAddresses[i];
+            userAddrs[i] = userAddr;
+            certificates[i] = userCertificates[userAddr];
+        }
+
+        return (userAddrs, certificates);
     }
 
     function getAuthorityDetails(
