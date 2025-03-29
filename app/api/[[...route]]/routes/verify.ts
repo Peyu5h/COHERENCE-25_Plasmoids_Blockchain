@@ -3,6 +3,7 @@ import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import { userRegistryAbi, userRegistryAddress } from "~/lib/abi/userRegistry";
 import { success, err, validationErr } from "~/lib/api/utils";
+import { prisma } from "~/lib/prisma";
 
 const verify = new Hono();
 
@@ -154,6 +155,7 @@ verify.post("/", async (c) => {
     }
 
     let allVerificationsSuccessful = true;
+    let highestIncome = 0;
 
     if (reqData.conditions.age && dob) {
       const userAge = calculateAge(dob);
@@ -177,8 +179,6 @@ verify.post("/", async (c) => {
       Array.isArray(certificates) &&
       certificates.length > 0
     ) {
-      let highestIncome = 0;
-
       for (const cert of certificates) {
         try {
           const metadata = JSON.parse(cert.metadata || "{}");
@@ -242,7 +242,78 @@ verify.post("/", async (c) => {
       if (!isVerified) allVerificationsSuccessful = false;
     }
 
-    //todo DB-integration
+    // Store verification result in database
+    try {
+      const verificationHistory = await prisma.verificationHistory.create({
+        data: {
+          userAddress: reqData.userAddress,
+          verifierId: reqData.verifierId,
+          timestamp: new Date(),
+          success: allVerificationsSuccessful,
+          conditions: reqData.conditions,
+          results: result.results,
+          proofs: {
+            create: [
+              ...(result.results.age
+                ? [
+                    {
+                      verificationType: "Age",
+                      condition: `Age ${reqData.conditions.age?.operator} ${reqData.conditions.age?.value}`,
+                      value: String(calculateAge(dob)),
+                      operator: reqData.conditions.age?.operator || "equals",
+                      verified: result.results.age.verified,
+                      proof: result.results.age.proof,
+                    },
+                  ]
+                : []),
+              ...(result.results.income
+                ? [
+                    {
+                      verificationType: "Income",
+                      condition: `Income ${reqData.conditions.income?.operator} ${reqData.conditions.income?.value}`,
+                      value: String(highestIncome || 0),
+                      operator: reqData.conditions.income?.operator || "equals",
+                      verified: result.results.income.verified,
+                      proof: result.results.income.proof,
+                    },
+                  ]
+                : []),
+              ...(result.results.city
+                ? [
+                    {
+                      verificationType: "Location",
+                      condition: `City = ${reqData.conditions.city?.value}`,
+                      value: physicalAddress || "",
+                      operator: "equals",
+                      verified: result.results.city.verified,
+                      proof: result.results.city.proof,
+                    },
+                  ]
+                : []),
+              ...(result.results.education
+                ? [
+                    {
+                      verificationType: "Education",
+                      condition: `Education = ${reqData.conditions.education?.value}`,
+                      value: "",
+                      operator: "equals",
+                      verified: result.results.education.verified,
+                      proof: result.results.education.proof,
+                    },
+                  ]
+                : []),
+            ],
+          },
+        },
+        include: {
+          proofs: true,
+        },
+      });
+
+      console.log("Verification stored:", verificationHistory.id);
+    } catch (dbError) {
+      console.error("Failed to store verification:", dbError);
+    }
 
     result.success = allVerificationsSuccessful;
     return c.json(success(result));
@@ -254,6 +325,42 @@ verify.post("/", async (c) => {
       err(`Verification failed: ${errorMessage}`, {
         status: 500,
         code: "VERIFICATION_ERROR",
+      }),
+    );
+  }
+});
+
+// Add GET endpoint for verification history
+verify.get("/history", async (c) => {
+  try {
+    const verifierId = c.req.query("verifierId");
+
+    if (!verifierId || !verifierId.startsWith("0x")) {
+      return c.json(validationErr("Invalid verifier ID format"));
+    }
+
+    const history = await prisma.verificationHistory.findMany({
+      where: {
+        verifierId: verifierId,
+      },
+      include: {
+        proofs: true,
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: 50,
+    });
+
+    return c.json(success(history));
+  } catch (error) {
+    console.error("Error fetching verification history:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return c.json(
+      err(`Failed to fetch verification history: ${errorMessage}`, {
+        status: 500,
+        code: "FETCH_HISTORY_ERROR",
       }),
     );
   }

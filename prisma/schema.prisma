@@ -10,10 +10,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model Verification {
-//   id            String   @id @default(auto()) @map("_id") @db.ObjectId
-//   name          String
-//   walletAddress String   @unique
-//   .....
-//   @@map("users")
-// }
+model VerificationHistory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userAddress String
+  verifierId  String
+  timestamp   DateTime @default(now())
+  success     Boolean
+
+  conditions Json
+  results    Json
+
+  proofs VerificationProof[]
+
+  @@map("verifications")
+}
+
+model VerificationProof {
+  id               String  @id @default(auto()) @map("_id") @db.ObjectId
+  verificationType String
+  condition        String
+  value            String
+  operator         String
+  verified         Boolean
+  proof            String
+
+  verificationId String              @db.ObjectId
+  verification   VerificationHistory @relation(fields: [verificationId], references: [id])
+
+  @@map("verification_proofs")
+}

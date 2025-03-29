@@ -52,50 +52,27 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-// Mock verification history data
-const verificationHistory = [
-  {
-    id: 1,
-    userId: "0x1234...7890",
-    userName: "John Doe",
-    verificationType: "Age Verification",
-    condition: "Age > 21",
-    result: "Verified",
-    timestamp: "2023-10-15 14:30",
-  },
-  {
-    id: 2,
-    userId: "0x2345...8901",
-    userName: "Jane Smith",
-    verificationType: "Income Verification",
-    condition: "Income > ₹500,000",
-    result: "Failed",
-    timestamp: "2023-10-14 11:20",
-  },
-  {
-    id: 3,
-    userId: "0x3456...9012",
-    userName: "Alice Johnson",
-    verificationType: "Location Verification",
-    condition: "City = Mumbai",
-    result: "Verified",
-    timestamp: "2023-10-12 09:45",
-  },
-  {
-    id: 4,
-    userId: "0x4567...0123",
-    userName: "Robert Williams",
-    verificationType: "Education Verification",
-    condition: "Degree = Bachelor's",
-    result: "Verified",
-    timestamp: "2023-10-10 16:15",
-  },
-];
+type VerificationHistoryItem = {
+  id: string;
+  userAddress: string;
+  timestamp: string;
+  success: boolean;
+  proofs: {
+    id: string;
+    verificationType: string;
+    condition: string;
+    verified: boolean;
+  }[];
+};
 
 export default function VerifierDashboard() {
   const { address, isConnected } = useAccount();
   const { name: roleName, role, isLoading: roleLoading } = useUserRole(address);
   const { user, isLoading: userLoading, age } = useUser(address);
+  const [verificationHistory, setVerificationHistory] = useState<
+    VerificationHistoryItem[]
+  >([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const [conditions, setConditions] = useState({
     ageCheck: true,
@@ -118,6 +95,12 @@ export default function VerifierDashboard() {
       generateQrCode();
     }
   }, [conditions, activeTab]);
+
+  useEffect(() => {
+    if (address && activeTab === "history") {
+      fetchVerificationHistory();
+    }
+  }, [address, activeTab]);
 
   const generateQrCode = () => {
     const baseUrl = window.location.origin + "/verify";
@@ -151,6 +134,27 @@ export default function VerifierDashboard() {
         verificationEndpoint,
       )}&size=200x200`,
     );
+  };
+
+  const fetchVerificationHistory = async () => {
+    if (!address) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/verify/history?verifierId=${address}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setVerificationHistory(data.data);
+      } else {
+        toast.error("Failed to load verification history");
+      }
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      toast.error("Failed to load verification history");
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const handleToggleCondition = (condition: string) => {
@@ -698,57 +702,72 @@ export default function VerifierDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="min-h-[500px]">
-                    <div className="overflow-hidden rounded-md border">
-                      <div className="bg-muted/40 grid grid-cols-6 border-b p-4 font-medium">
-                        <div className="col-span-2">User</div>
-                        <div>Verification Type</div>
-                        <div>Condition</div>
-                        <div>Result</div>
-                        <div>Date & Time</div>
-                      </div>
-                      <div className="divide-y">
-                        {verificationHistory.map((record) => (
+                    {isLoadingHistory ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
                           <div
-                            key={record.id}
-                            className="hover:bg-muted/30 grid grid-cols-6 items-center p-4 transition-colors"
-                          >
-                            <div className="col-span-2">
-                              <div className="font-medium">
-                                {record.userName}
-                              </div>
-                              <div className="text-muted-foreground text-sm">
-                                {record.userId}
-                              </div>
-                            </div>
-                            <div>{record.verificationType}</div>
-                            <div>{record.condition}</div>
-                            <div>
-                              <Badge
-                                variant={
-                                  record.result === "Verified"
-                                    ? "default"
-                                    : "destructive"
-                                }
-                                className={
-                                  record.result === "Verified"
-                                    ? "bg-emerald-500 hover:bg-emerald-600"
-                                    : ""
-                                }
-                              >
-                                {record.result === "Verified" && (
-                                  <CheckCircle className="mr-1 h-3 w-3" />
-                                )}
-                                {record.result === "Failed" && (
-                                  <XCircle className="mr-1 h-3 w-3" />
-                                )}
-                                {record.result}
-                              </Badge>
-                            </div>
-                            <div className="text-sm">{record.timestamp}</div>
-                          </div>
+                            key={i}
+                            className="bg-muted/40 h-16 animate-pulse rounded-md"
+                          />
                         ))}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="overflow-hidden rounded-md border">
+                        <div className="bg-muted/40 grid grid-cols-6 border-b p-4 font-medium">
+                          <div className="col-span-2">User</div>
+                          <div>Verification Type</div>
+                          <div>Condition</div>
+                          <div>Result</div>
+                          <div>Date & Time</div>
+                        </div>
+                        <div className="divide-y">
+                          {verificationHistory.map((record) =>
+                            record.proofs.map((proof) => (
+                              <div
+                                key={proof.id}
+                                className="hover:bg-muted/30 grid grid-cols-6 items-center p-4 transition-colors"
+                              >
+                                <div className="col-span-2">
+                                  <div className="text-muted-foreground text-sm">
+                                    {record.userAddress}
+                                  </div>
+                                </div>
+                                <div>{proof.verificationType}</div>
+                                <div>{proof.condition}</div>
+                                <div>
+                                  <Badge
+                                    variant={
+                                      proof.verified ? "default" : "destructive"
+                                    }
+                                    className={
+                                      proof.verified
+                                        ? "bg-emerald-500 hover:bg-emerald-600"
+                                        : ""
+                                    }
+                                  >
+                                    {proof.verified ? (
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                    ) : (
+                                      <XCircle className="mr-1 h-3 w-3" />
+                                    )}
+                                    {proof.verified ? "Verified" : "Failed"}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm">
+                                  {format(new Date(record.timestamp), "PPp")}
+                                </div>
+                              </div>
+                            )),
+                          )}
+
+                          {verificationHistory.length === 0 && (
+                            <div className="text-muted-foreground p-8 text-center">
+                              No verification history found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
