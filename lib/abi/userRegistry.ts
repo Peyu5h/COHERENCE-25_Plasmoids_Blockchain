@@ -1,7 +1,7 @@
 import { Abi } from "viem";
 
 export const userRegistryAddress =
-  "0x77ECac07190cfC2Ee11410Ce2a5c038A0EB35633" as const;
+  "0xD498d67E539E941c4D079a3E94F168E039248f0B" as const;
 
 export const userRegistryAbi = [
   {
@@ -852,6 +852,57 @@ export const userRegistryAbi = [
       },
     ],
     name: "updateAuthorityDetails",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_certificateIndex",
+        type: "uint256",
+      },
+      {
+        internalType: "string",
+        name: "_newMetadata",
+        type: "string",
+      },
+    ],
+    name: "updateCertificateMetadata",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_name",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_dob",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_gender",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_physicalAddress",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_mobileNumber",
+        type: "string",
+      },
+    ],
+    name: "updateUserProfile",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

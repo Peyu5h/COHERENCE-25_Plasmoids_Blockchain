@@ -50,11 +50,11 @@ export default function AdminPage() {
       case 0:
         return "User";
       case 1:
-        return "Authority";
+        return "User";
       case 2:
-        return "Verifier";
+        return "Authority";
       case 3:
-        return "Admin";
+        return "Verifier";
       default:
         return "Admin";
     }
@@ -86,16 +86,16 @@ export default function AdminPage() {
 
   const filteredUsers = users.filter((user) => {
     if (activeTab === "all") return true;
-    if (activeTab === "users") return user.role === 0;
-    if (activeTab === "authorities") return user.role === 1;
-    if (activeTab === "verifiers") return user.role === 2;
-    if (activeTab === "admins") return user.role === 3;
+    if (activeTab === "users") return user.role === 1;
+    if (activeTab === "authorities") return user.role === 2;
+    if (activeTab === "verifiers") return user.role === 3;
+    if (activeTab === "admins") return user.role === 4;
     return true;
   });
 
   return (
     <RoleProtectedRoute requiredRole={UserRole.Admin}>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto max-w-xl py-8">
         <Card className="bg-background mb-8">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
