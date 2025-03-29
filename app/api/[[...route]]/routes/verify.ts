@@ -4,6 +4,7 @@ import { sepolia } from "viem/chains";
 import { userRegistryAbi, userRegistryAddress } from "~/lib/abi/userRegistry";
 import { success, err, validationErr } from "~/lib/api/utils";
 import { prisma } from "~/lib/prisma";
+import { pusherServer } from "~/lib/pusher";
 
 const verify = new Hono();
 
@@ -310,6 +311,24 @@ verify.post("/", async (c) => {
         },
       });
 
+      // realtime-pusher
+      await pusherServer.trigger(
+        `verifier-${reqData.verifierId}`,
+        "new-verification",
+        {
+          id: verificationHistory.id,
+          userAddress: verificationHistory.userAddress,
+          timestamp: verificationHistory.timestamp,
+          success: verificationHistory.success,
+          proofs: verificationHistory.proofs.map((proof) => ({
+            id: proof.id,
+            verificationType: proof.verificationType,
+            condition: proof.condition,
+            verified: proof.verified,
+          })),
+        },
+      );
+
       console.log("Verification stored:", verificationHistory.id);
     } catch (dbError) {
       console.error("Failed to store verification:", dbError);
@@ -330,7 +349,6 @@ verify.post("/", async (c) => {
   }
 });
 
-// Add GET endpoint for verification history
 verify.get("/history", async (c) => {
   try {
     const verifierId = c.req.query("verifierId");

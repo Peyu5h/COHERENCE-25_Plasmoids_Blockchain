@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useUserRole, UserRole } from "~/hooks/useUserRole";
 import { useUser } from "~/hooks/useUser";
+import { pusherClient } from "~/lib/pusher";
 import RoleProtectedRoute from "~/components/RoleProtectedRoute";
 import {
   Card,
@@ -99,6 +100,22 @@ export default function VerifierDashboard() {
   useEffect(() => {
     if (address && activeTab === "history") {
       fetchVerificationHistory();
+
+      const channelName = `verifier-${address}`;
+      const channel = pusherClient.subscribe(channelName);
+
+      const handleNewVerification = (data: VerificationHistoryItem) => {
+        console.log("Received new verification:", data);
+        setVerificationHistory((prev) => [data, ...prev]);
+        toast.success("New verification received");
+      };
+
+      channel.bind("new-verification", handleNewVerification);
+
+      return () => {
+        channel.unbind("new-verification", handleNewVerification);
+        pusherClient.unsubscribe(channelName);
+      };
     }
   }, [address, activeTab]);
 

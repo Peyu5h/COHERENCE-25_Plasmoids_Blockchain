@@ -67,6 +67,7 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("certificates");
 
   const [qrValue, setQrValue] = useState("");
+  const [verificationUrl, setVerificationUrl] = useState("");
 
   const [sharingPreferences, setSharingPreferences] = useState({
     fullName: true,
@@ -91,19 +92,20 @@ export default function UserDashboard() {
     const sharedData = {
       timestamp: new Date().toISOString(),
       sharedData: {
-        name: user.name,
-        phone: user.phone,
-        age: calculateAge(user.dob),
-        address: user.address,
-        aadharNumber: user.aadharNumber,
+        name: sharingPreferences.fullName ? user.name : undefined,
+        phone: sharingPreferences.phone ? user.phone : undefined,
+        age: sharingPreferences.age ? calculateAge(user.dob) : undefined,
+        address: sharingPreferences.address ? user.address : undefined,
+        aadharNumber: sharingPreferences.aadhar ? user.aadharNumber : undefined,
       },
     };
 
     const encodedData = encodeURIComponent(JSON.stringify(sharedData));
-    const url = `${window.location.origin}/userDetails?data=${encodedData}`;
+    const verificationUrl = `${window.location.origin}/userDetails?data=${encodedData}`;
+    setVerificationUrl(verificationUrl);
 
     try {
-      const qr = await QRCode.toDataURL(url);
+      const qr = await QRCode.toDataURL(verificationUrl);
       setQrValue(qr);
       toast.success("QR code generated successfully");
     } catch (err) {
@@ -530,8 +532,12 @@ export default function UserDashboard() {
                         variant="outline"
                         disabled={!qrValue}
                         onClick={() => {
-                          navigator.clipboard.writeText(qrValue);
-                          toast.success("QR code link copied to clipboard");
+                          if (verificationUrl) {
+                            navigator.clipboard.writeText(verificationUrl);
+                            toast.success(
+                              "Verification link copied to clipboard",
+                            );
+                          }
                         }}
                         className="w-full sm:w-auto"
                       >

@@ -455,4 +455,32 @@ contract UserRegistry {
     function getAllUsers() external view returns (address[] memory) {
         return userAddresses;
     }
+
+    function updateUserProfile(
+        string memory _name,
+        string memory _dob,
+        string memory _gender,
+        string memory _physicalAddress,
+        string memory _mobileNumber
+    ) external userExists {
+        UserData storage userData = users[msg.sender];
+
+        userData.name = _name;
+        userData.dob = _dob;
+        userData.gender = _gender;
+        userData.physicalAddress = _physicalAddress;
+        userData.mobileNumber = _mobileNumber;
+    }
+
+    function updateCertificateMetadata(
+        uint256 _certificateIndex,
+        string memory _newMetadata
+    ) external userExists {
+        require(
+            _certificateIndex < userCertificates[msg.sender].length,
+            "Certificate does not exist"
+        );
+
+        userCertificates[msg.sender][_certificateIndex].metadata = _newMetadata;
+    }
 }
