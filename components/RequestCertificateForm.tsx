@@ -172,12 +172,6 @@ export default function RequestCertificateForm() {
                 ))}
               </SelectContent>
             </Select>
-            {formik.touched.authorityAddress &&
-              formik.errors.authorityAddress && (
-                <p className="text-sm text-red-500">
-                  {formik.errors.authorityAddress}
-                </p>
-              )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="certificateId">Certificate ID</Label>

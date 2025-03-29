@@ -15,13 +15,16 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, Edit } from "lucide-react";
 import { useUserRole } from "~/hooks/useUserRole";
 import {
   useUserCertificates,
   useAllCertificates,
 } from "~/hooks/useCertificates";
 import { getIPFSGatewayURL } from "~/hooks/usePinata";
+import { Skeleton } from "~/components/ui/skeleton";
+import { FileText } from "lucide-react";
+import UpdateCertificateForm from "~/components/UpdateCertificateForm";
 
 export default function CertificatesList({
   userAddress,
@@ -31,6 +34,9 @@ export default function CertificatesList({
   const { address: connectedAddress } = useAccount();
   const { role } = useUserRole(connectedAddress);
   const [selectedTab, setSelectedTab] = useState("all");
+  const [isUpdateCertificateOpen, setIsUpdateCertificateOpen] = useState(false);
+  const [selectedCertificateIndex, setSelectedCertificateIndex] =
+    useState<number>(0);
 
   const { writeAsync, isLoading: isActionLoading } = useTransaction({
     successMessage: "Certificate action completed successfully!",
@@ -88,8 +94,24 @@ export default function CertificatesList({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      <div className="space-y-4">
+        {Array(3)
+          .fill(0)
+          .map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-4 rounded-lg border p-4"
+            >
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-24" />
+            </div>
+          ))}
       </div>
     );
   }
@@ -99,6 +121,19 @@ export default function CertificatesList({
       <div className="rounded-md bg-red-50 p-8 text-center">
         <XCircle className="mx-auto mb-2 h-10 w-10 text-red-500" />
         <p className="font-medium text-red-700">{error}</p>
+      </div>
+    );
+  }
+
+  if (!certificates || certificates.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FileText className="text-muted-foreground/40 mb-4 h-12 w-12" />
+        <h3 className="mb-2 text-lg font-medium">No Certificates Found</h3>
+        <p className="text-muted-foreground text-sm">
+          You haven&apos;t uploaded any certificates yet. Click the button above
+          to add your first certificate.
+        </p>
       </div>
     );
   }
@@ -120,7 +155,7 @@ export default function CertificatesList({
                 if (selectedTab === "pending") return !cert.isVerified;
                 return true;
               })
-              .map((certificate) => {
+              .map((certificate, index) => {
                 const metadata = JSON.parse(certificate.metadata);
                 return (
                   <Card
@@ -156,6 +191,17 @@ export default function CertificatesList({
                               alt="Certificate"
                               className="h-full w-full object-cover"
                             />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-2 right-12"
+                              onClick={() => {
+                                setSelectedCertificateIndex(index);
+                                setIsUpdateCertificateOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -201,6 +247,14 @@ export default function CertificatesList({
           </div>
         </TabsContent>
       </Tabs>
+
+      {isUpdateCertificateOpen && (
+        <UpdateCertificateForm
+          isOpen={isUpdateCertificateOpen}
+          onClose={() => setIsUpdateCertificateOpen(false)}
+          certificateIndex={selectedCertificateIndex}
+        />
+      )}
     </div>
   );
 }

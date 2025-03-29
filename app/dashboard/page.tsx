@@ -50,12 +50,333 @@ import {
   FileCheck,
   AlertCircle,
   UploadCloud,
+  CalendarIcon,
 } from "lucide-react";
 import CertificatesList from "~/components/CertificatesList";
 import RequestCertificateForm from "~/components/RequestCertificateForm";
 import { toast } from "sonner";
 import { useUserCertificates } from "~/hooks/useCertificates";
 import QRCode from "qrcode";
+import { useFormik, FormikErrors } from "formik";
+import * as Yup from "yup";
+import { useTransaction } from "~/hooks/useTransaction";
+import { userRegistryAddress, userRegistryAbi } from "~/lib/abi/userRegistry";
+
+import { cn } from "~/lib/utils";
+import { Label } from "~/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Textarea } from "~/components/ui/textarea";
+import { Input } from "~/components/ui/input";
+
+interface FormValues {
+  name: string;
+  dob: string;
+  gender: string;
+  address: string;
+  mobileNumber: string;
+}
+
+interface UpdateProfileFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentUser: {
+    name: string;
+    dob: string;
+    gender: string;
+    address: string;
+    phone: string;
+  };
+}
+
+function UpdateProfileForm({
+  isOpen,
+  onClose,
+  currentUser,
+}: UpdateProfileFormProps) {
+  const { writeAsync, isLoading } = useTransaction({
+    successMessage: "Profile updated successfully!",
+    onSuccess: () => {
+      onClose();
+    },
+  });
+
+  const formik = useFormik<FormValues>({
+    initialValues: {
+      name: currentUser?.name || "",
+      dob: currentUser?.dob || "",
+      gender: currentUser?.gender || "",
+      address: currentUser?.address || "",
+      mobileNumber: currentUser?.phone || "",
+    },
+    validationSchema: Yup.object({
+      name: Yup.string().required("Name is required"),
+      dob: Yup.string().required("Date of birth is required"),
+      gender: Yup.string().required("Gender is required"),
+      address: Yup.string().required("Address is required"),
+      mobileNumber: Yup.string()
+        .required("Mobile number is required")
+        .matches(/^[0-9]+$/, "Must be only digits")
+        .min(10, "Must be at least 10 digits"),
+    }),
+    onSubmit: async (values) => {
+      try {
+        await writeAsync({
+          address: userRegistryAddress,
+          abi: userRegistryAbi,
+          functionName: "updateUserProfile",
+          args: [
+            values.name,
+            values.dob,
+            values.gender,
+            values.address,
+            values.mobileNumber,
+          ],
+        });
+      } catch (error) {
+        console.error("Update profile error:", error);
+      }
+    },
+  });
+
+  const getErrorMessage = (fieldName: keyof FormValues): string => {
+    return formik.touched[fieldName] && formik.errors[fieldName]
+      ? String(formik.errors[fieldName])
+      : "";
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Update Profile</DialogTitle>
+          <DialogDescription>
+            Update your personal information
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={formik.handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              value={formik.values.name}
+              className={cn(
+                getErrorMessage("name")
+                  ? "border-destructive focus-visible:ring-destructive"
+                  : "",
+              )}
+            />
+            {getErrorMessage("name") && (
+              <p className="text-destructive text-sm">
+                {getErrorMessage("name")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dob">Date of Birth</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="dob"
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formik.values.dob && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formik.values.dob ? (
+                    format(new Date(formik.values.dob), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={
+                    formik.values.dob ? new Date(formik.values.dob) : undefined
+                  }
+                  //@ts-expect-error - bruh
+                  onSelect={(date: Date | null) => {
+                    if (date) {
+                      formik.setFieldValue("dob", format(date, "yyyy-MM-dd"));
+                    }
+                  }}
+                  disabled={(date: Date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            {getErrorMessage("dob") && (
+              <p className="text-destructive text-sm">
+                {getErrorMessage("dob")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              name="gender"
+              onValueChange={(value: string) =>
+                formik.setFieldValue("gender", value)
+              }
+              defaultValue={formik.values.gender}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {getErrorMessage("gender") && (
+              <p className="text-destructive text-sm">
+                {getErrorMessage("gender")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              name="address"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              value={formik.values.address}
+              rows={3}
+            />
+            {getErrorMessage("address") && (
+              <p className="text-destructive text-sm">
+                {getErrorMessage("address")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Input
+              id="mobileNumber"
+              name="mobileNumber"
+              type="text"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              value={formik.values.mobileNumber}
+            />
+            {getErrorMessage("mobileNumber") && (
+              <p className="text-destructive text-sm">
+                {getErrorMessage("mobileNumber")}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Updating..." : "Update Profile"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface UpdateCertificateFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  certificateIndex: number;
+}
+
+function UpdateCertificateForm({
+  isOpen,
+  onClose,
+  certificateIndex,
+}: UpdateCertificateFormProps) {
+  const { writeAsync, isLoading } = useTransaction({
+    successMessage: "Certificate updated successfully!",
+    onSuccess: () => {
+      onClose();
+    },
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      metadata: "",
+    },
+    validationSchema: Yup.object({
+      metadata: Yup.string().required("New metadata is required"),
+    }),
+    onSubmit: async (values) => {
+      try {
+        await writeAsync({
+          address: userRegistryAddress,
+          abi: userRegistryAbi,
+          functionName: "updateCertificateMetadata",
+          args: [certificateIndex, values.metadata],
+        });
+      } catch (error) {
+        console.error("Update certificate error:", error);
+      }
+    },
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Update Certificate</DialogTitle>
+          <DialogDescription>
+            Update the metadata for your certificate
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={formik.handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="metadata">New Metadata</Label>
+            <Textarea
+              id="metadata"
+              name="metadata"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              value={formik.values.metadata}
+              rows={4}
+              placeholder="Enter new metadata for the certificate"
+            />
+            {formik.touched.metadata && formik.errors.metadata && (
+              <p className="text-destructive text-sm">
+                {String(formik.errors.metadata)}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Updating..." : "Update Certificate"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function UserDashboard() {
   const { address } = useAccount();
@@ -76,6 +397,11 @@ export default function UserDashboard() {
     age: true,
     address: false,
   });
+
+  const [isUpdateProfileOpen, setIsUpdateProfileOpen] = useState(false);
+  const [isUpdateCertificateOpen, setIsUpdateCertificateOpen] = useState(false);
+  const [selectedCertificateIndex, setSelectedCertificateIndex] =
+    useState<number>(0);
 
   const toggleSharingPreference = (
     preference: keyof typeof sharingPreferences,
@@ -210,12 +536,24 @@ export default function UserDashboard() {
               ) : (
                 <>
                   <h2 className="text-2xl font-bold">{user?.name}</h2>
-                  <p className="text-muted-foreground text-center text-sm break-all">
+                  <p className="text-muted-foreground text-center text-xs break-all">
                     {user?.walletAddress}
                   </p>
-                  <Badge className="bg-primary/90 hover:bg-primary px-3 py-1">
-                    Individual User
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary/90 hover:bg-primary mt-2 h-9 rounded-md px-3 py-1">
+                      Individual User
+                    </Badge>
+
+                    {!isLoading && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsUpdateProfileOpen(true)}
+                        className="mt-2"
+                      >
+                        Update Profile
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -271,7 +609,7 @@ export default function UserDashboard() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Home className="text-primary/70 mt-0.5 h-5 w-5" />
+                    <Home className="text-primary/70 mt-0.5 h-12 w-12" />
                     <div>
                       <p className="text-sm font-medium">Address</p>
                       <p className="text-muted-foreground text-sm">
@@ -631,6 +969,20 @@ export default function UserDashboard() {
             </Tabs>
           </div>
         </div>
+
+        {user && (
+          <UpdateProfileForm
+            isOpen={isUpdateProfileOpen}
+            onClose={() => setIsUpdateProfileOpen(false)}
+            currentUser={user}
+          />
+        )}
+
+        <UpdateCertificateForm
+          isOpen={isUpdateCertificateOpen}
+          onClose={() => setIsUpdateCertificateOpen(false)}
+          certificateIndex={selectedCertificateIndex}
+        />
       </div>
     </RoleProtectedRoute>
   );

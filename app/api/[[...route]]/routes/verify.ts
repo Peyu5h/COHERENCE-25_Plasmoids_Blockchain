@@ -354,6 +354,7 @@ verify.get("/history", async (c) => {
     const verifierId = c.req.query("verifierId");
 
     if (!verifierId || !verifierId.startsWith("0x")) {
+      // @ts-expect-error - bruh
       return c.json(validationErr("Invalid verifier ID format"));
     }
 

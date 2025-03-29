@@ -306,17 +306,13 @@ export default function Home() {
               <p className="mb-4">
                 Connect your wallet to register or access your dashboard.
               </p>
-              <w3m-connect-button />
+              <div className="flex w-full items-center justify-center">
+                <w3m-connect-button />
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
-
-      <footer className="bg-background mt-auto border-t py-6">
-        <div className="text-muted-foreground container mx-auto px-4 text-center">
-          © {new Date().getFullYear()} Decentralized Identity System
-        </div>
-      </footer>
     </div>
   );
 }
