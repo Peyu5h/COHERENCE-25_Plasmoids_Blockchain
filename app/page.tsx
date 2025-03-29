@@ -306,6 +306,7 @@ export default function Home() {
               <p className="mb-4">
                 Connect your wallet to register or access your dashboard.
               </p>
+              <w3m-connect-button />
             </CardContent>
           </Card>
         )}

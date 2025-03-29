@@ -41,6 +41,45 @@ interface RegistrationFormProps {
   onClose: () => void;
 }
 
+interface FormLabels {
+  name: string;
+  dob: string;
+  gender: string;
+  address: string;
+  mobile: string;
+  description: string;
+}
+
+const formLabelsConfig: Record<"user" | "authority" | "verifier", FormLabels> =
+  {
+    user: {
+      name: "Full Name",
+      dob: "Date of Birth",
+      gender: "Gender",
+      address: "Residential Address",
+      mobile: "Mobile Number",
+      description: "Complete the form below to register your personal account",
+    },
+    authority: {
+      name: "Representative Name",
+      dob: "Organization Established Date",
+      gender: "Department Type",
+      address: "Office Address",
+      mobile: "Official Contact Number",
+      description:
+        "Complete the form below to register your government authority account",
+    },
+    verifier: {
+      name: "Organization Name",
+      dob: "Business Registration Date",
+      gender: "Organization Type",
+      address: "Business Address",
+      mobile: "Business Contact Number",
+      description:
+        "Complete the form below to register your verification service account",
+    },
+  };
+
 export default function RegistrationForm({
   formType,
   isOpen,
@@ -149,6 +188,8 @@ export default function RegistrationForm({
     });
   };
 
+  const labels = formLabelsConfig[formType];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -157,7 +198,7 @@ export default function RegistrationForm({
             {formType} Registration
           </DialogTitle>
           <DialogDescription className="text-center">
-            Complete the form below to register your {formType} account
+            {labels.description}
             {formType === "user" && (
               <Button
                 type="button"
@@ -175,11 +216,12 @@ export default function RegistrationForm({
 
         <form onSubmit={formik.handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{labels.name}</Label>
             <Input
               id="name"
               name="name"
               type="text"
+              placeholder={`Enter ${labels.name.toLowerCase()}`}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.name}
@@ -195,7 +237,7 @@ export default function RegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dob">Date of Birth</Label>
+            <Label htmlFor="dob">{labels.dob}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -213,7 +255,7 @@ export default function RegistrationForm({
                   {formik.values.dob ? (
                     format(new Date(formik.values.dob), "PPP")
                   ) : (
-                    <span>Pick a date</span>
+                    <span>Select {labels.dob}</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -241,7 +283,7 @@ export default function RegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gender">Gender</Label>
+            <Label htmlFor="gender">{labels.gender}</Label>
             <Select
               name="gender"
               onValueChange={(value) => formik.setFieldValue("gender", value)}
@@ -254,12 +296,32 @@ export default function RegistrationForm({
                     : "",
                 )}
               >
-                <SelectValue placeholder="Select Gender" />
+                <SelectValue placeholder={`Select ${labels.gender}`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                {formType === "user" ? (
+                  <>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </>
+                ) : formType === "authority" ? (
+                  <>
+                    <SelectItem value="Central">Central Department</SelectItem>
+                    <SelectItem value="State">State Department</SelectItem>
+                    <SelectItem value="Local">Local Body</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="Private">
+                      Private Organization
+                    </SelectItem>
+                    <SelectItem value="NGO">NGO</SelectItem>
+                    <SelectItem value="Institute">
+                      Educational Institute
+                    </SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
             {formik.touched.gender && formik.errors.gender && (
@@ -268,10 +330,11 @@ export default function RegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">{labels.address}</Label>
             <Textarea
               id="address"
               name="address"
+              placeholder={`Enter ${labels.address.toLowerCase()}`}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.address}
@@ -290,11 +353,12 @@ export default function RegistrationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Label htmlFor="mobileNumber">{labels.mobile}</Label>
             <Input
               id="mobileNumber"
               name="mobileNumber"
               type="text"
+              placeholder={`Enter ${labels.mobile.toLowerCase()}`}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               value={formik.values.mobileNumber}
@@ -325,13 +389,7 @@ export default function RegistrationForm({
             >
               {isSubmitting || isLoading
                 ? "Processing..."
-                : `Register as ${
-                    formType === "user"
-                      ? "User"
-                      : formType === "authority"
-                        ? "Authority"
-                        : "Verifier"
-                  }`}
+                : `Register as ${formType === "user" ? "User" : formType === "authority" ? "Government Authority" : "Verification Service"}`}
             </Button>
           </div>
         </form>
