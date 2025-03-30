@@ -117,7 +117,7 @@ export default function Home() {
           </div>
 
           <div className="mx-auto flex items-center justify-center gap-6">
-            <h2 className="mb-8 text-center text-2xl font-bold">
+            <h2 className="mb-8 text-center text-xl font-thin">
               Loading Your Profile
             </h2>
             <div className="mb-8">
@@ -190,7 +190,7 @@ export default function Home() {
         {isConnected && needsRegistration && !registrationType && (
           <>
             <div className="mx-auto flex items-center justify-center gap-6">
-              <h2 className="mb-8 text-center text-2xl font-bold">
+              <h2 className="mb-8 text-center text-xl font-thin">
                 Choose Your Role to Register
               </h2>
               <div className="mb-8">

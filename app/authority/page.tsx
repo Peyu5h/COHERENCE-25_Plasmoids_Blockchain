@@ -68,7 +68,7 @@ export default function AuthorityDashboard() {
   const { user, isLoading: userLoading, age } = useUser(address);
   const { users } = useAllUsers();
   const { certificates } = useUserCertificates(
-    "0x1304865A3409A96abc5596C241f1572E1AAc0b87",
+    "0x31Af0e984E33DBD443ce5f511907B37274aF362C",
   );
   console.log("certs", certificates);
   console.log(users);
