@@ -1,7 +1,7 @@
 import { Abi } from "viem";
 
 export const userRegistryAddress =
-  "0xD498d67E539E941c4D079a3E94F168E039248f0B" as const;
+  "0xA1d685e46b5090Bb7Ae7Ba12a3d4a4D481442A7B" as const;
 
 export const userRegistryAbi = [
   {
